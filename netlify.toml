@@ -4,7 +4,6 @@
   functions = "backend/src/functions"
 
 [functions]
-  node_bundle = true
   external_node_modules = ["mongoose", "bcryptjs", "jsonwebtoken"]
 
 [[redirects]]
