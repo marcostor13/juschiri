@@ -1,0 +1,44 @@
+{
+  "model": "claude-sonnet-4-6",
+  "theme": "dark",
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(npm run dev)",
+      "Bash(npm run lint)",
+      "Bash(npm run preview)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(netlify*)",
+      "Bash(ls*)",
+      "Bash(mkdir*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[design-agent] Validating against Jus Chiri design system — check CLAUDE.md Design System section before saving'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[build-agent] File changed. Run: npm run build to validate'"
+          }
+        ]
+      }
+    ]
+  }
+}
