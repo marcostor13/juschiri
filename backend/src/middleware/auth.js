@@ -6,7 +6,8 @@ module.exports = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretjuschiri');
+    const secret = process.env.JWT_SECRET2 || process.env.JWT_SECRET || 'supersecretjuschiri';
+    const decoded = jwt.verify(token, secret);
     req.userId = decoded.userId;
     next();
   } catch (err) {
