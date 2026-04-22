@@ -1,32 +1,32 @@
-require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
+// Solo cargar dotenv en desarrollo local
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
+}
+
 const express = require('express');
 const cors = require('cors');
 const productRoutes = require('./routes/products');
 
 const app = express();
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'http://localhost:5173',
-  'http://localhost:3000',
-].filter(Boolean);
-
-app.use(cors({
-  origin: function (origin, cb) {
-    const isDev = process.env.NODE_ENV !== 'production';
-    if (!origin || isDev || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error('Not allowed by CORS'));
-  },
-}));
+// CORS más permisivo o desactivado en producción (mismo dominio)
+app.use(cors());
 
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
-app.use('/api/products', productRoutes);
-app.use('/api/categories', require('./routes/categories'));
-app.use('/api/upload', require('./routes/upload'));
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/sales', require('./routes/sales'));
+// Rutas compatibles con /api (local) y con /.netlify/functions/api (producción)
+const apiRouter = express.Router();
+
+apiRouter.get('/health', (_req, res) => res.json({ status: 'ok' }));
+apiRouter.use('/products', productRoutes);
+apiRouter.use('/categories', require('./routes/categories'));
+apiRouter.use('/upload', require('./routes/upload'));
+apiRouter.use('/auth', require('./routes/auth'));
+apiRouter.use('/sales', require('./routes/sales'));
+
+// Montar el router en ambos posibles prefijos
+app.use('/api', apiRouter);
+app.use('/.netlify/functions/api', apiRouter);
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 
