@@ -139,7 +139,8 @@ const ProductCard = React.memo(({ product, onAddToCart }) => {
           navigate(`/producto/${product.codigo}`);
           return;
       }
-      onAddToCart(product);
+      const finalPrice = product.descuento > 0 ? product.precio * (1 - product.descuento / 100) : product.precio;
+      onAddToCart({ ...product, precio: finalPrice, precio_original: product.precio });
       setIsAdded(true);
       setTimeout(() => setIsAdded(false), 1000);
   };
@@ -151,6 +152,13 @@ const ProductCard = React.memo(({ product, onAddToCart }) => {
         <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-3 py-1 uppercase border-l-2 border-b-2 border-black z-10">
           Agotado
         </span>
+      )}
+      {product.descuento > 0 && (
+        <div className="absolute top-3 left-3 z-10">
+            <span className="bg-red-600 text-white text-xs font-black px-3 py-1.5 uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black transform -rotate-2 inline-block hover:rotate-0 transition-transform">
+                -{product.descuento}% OFF
+            </span>
+        </div>
       )}
       <img
         src={product.imagen_url || 'https://via.placeholder.com/400?text=No+Image'}
@@ -188,7 +196,16 @@ const ProductCard = React.memo(({ product, onAddToCart }) => {
         </Link>
       </div>
       <div className="mt-4 pt-4 border-t-2 border-gray-100 group-hover:border-black transition-colors flex justify-between items-center">
-        <p className="font-mono font-bold text-lg">{formatPrice(product.precio)}</p>
+        <div className="flex flex-col">
+            {product.descuento > 0 ? (
+                <div className="flex items-center gap-2">
+                    <p className="font-mono font-black text-xl text-red-600">{formatPrice(product.precio * (1 - product.descuento / 100))}</p>
+                    <p className="font-mono text-xs text-gray-400 line-through decoration-red-400/50 decoration-2">{formatPrice(product.precio)}</p>
+                </div>
+            ) : (
+                <p className="font-mono font-bold text-lg leading-none">{formatPrice(product.precio)}</p>
+            )}
+        </div>
       </div>
     </div>
   </div>
@@ -321,7 +338,16 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
                                             </div>
                                             <p className="text-xs font-mono text-gray-500 mb-2">{item.codigo}</p>
                                             <div className="flex justify-between items-center">
-                                                <p className="font-bold text-sm">{formatPrice(item.precio)}</p>
+                                                <div className="flex flex-col">
+                                                    {item.descuento > 0 ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-bold text-sm text-red-600">{formatPrice(item.precio)}</p>
+                                                            <p className="text-[10px] text-gray-400 line-through">{formatPrice(item.precio_original)}</p>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="font-bold text-sm">{formatPrice(item.precio)}</p>
+                                                    )}
+                                                </div>
                                                 <div className="bg-black text-white px-2 py-0.5 text-[10px] font-black uppercase">
                                                     CANT: {item.cantidad || 1}
                                                 </div>
@@ -555,6 +581,7 @@ export default function Storefront() {
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [onSaleOnly, setOnSaleOnly] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(24);
   const [allCategories, setAllCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
@@ -628,16 +655,20 @@ export default function Storefront() {
           const textToSearch = `${p.nombre || ''} ${p.marca || ''} ${p.codigo || ''}`.toLowerCase();
           if (!textToSearch.includes(q)) return false;
       }
-      if (priceMin && p.precio < Number(priceMin)) return false;
-      if (priceMax && p.precio > Number(priceMax)) return false;
+      const pFinal = p.descuento > 0 ? p.precio * (1 - p.descuento / 100) : p.precio;
+      if (priceMin && pFinal < Number(priceMin)) return false;
+      if (priceMax && pFinal > Number(priceMax)) return false;
       if (inStockOnly && p.stock_actual <= 0) return false;
+      if (onSaleOnly && (!p.descuento || p.descuento <= 0)) return false;
       return true;
     });
 
     // Sorteo
     result.sort((a, b) => {
-      if (sortBy === 'price_asc') return a.precio - b.precio;
-      if (sortBy === 'price_desc') return b.precio - a.precio;
+      const pFinalA = a.descuento > 0 ? a.precio * (1 - a.descuento / 100) : a.precio;
+      const pFinalB = b.descuento > 0 ? b.precio * (1 - b.descuento / 100) : b.precio;
+      if (sortBy === 'price_asc') return pFinalA - pFinalB;
+      if (sortBy === 'price_desc') return pFinalB - pFinalA;
       if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
       
       // Default / Featured: Stock + Image + Price
@@ -653,7 +684,7 @@ export default function Storefront() {
     });
 
     return result;
-  }, [products, selectedCategoryId, selectedTypeId, selectedSubcategoryId, selectedBrand, searchQuery, priceMin, priceMax, inStockOnly, sortBy]);
+  }, [products, selectedCategoryId, selectedTypeId, selectedSubcategoryId, selectedBrand, searchQuery, priceMin, priceMax, inStockOnly, onSaleOnly, sortBy]);
 
 
   // Infinite Scroll Trigger
@@ -671,7 +702,7 @@ export default function Storefront() {
   // Reset limit on filter change
   useEffect(() => {
     setDisplayLimit(24);
-  }, [selectedCategoryId, selectedSubcategoryId, searchQuery, priceMin, priceMax, inStockOnly]);
+  }, [selectedCategoryId, selectedSubcategoryId, searchQuery, priceMin, priceMax, inStockOnly, onSaleOnly]);
 
   return (
     <div className="font-sans antialiased bg-white text-gray-900 selection:bg-neon-green min-h-screen flex flex-col">
@@ -751,14 +782,24 @@ export default function Storefront() {
                 {/* Categorías Principales y Filtros Activos */}
                 <div className="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar w-full py-1">
                     <button
-                        onClick={() => { setSelectedCategoryId(null); setSelectedTypeId(null); setSelectedSubcategoryId(null); setSelectedBrand(null); }}
+                        onClick={() => { setSelectedCategoryId(null); setSelectedTypeId(null); setSelectedSubcategoryId(null); setSelectedBrand(null); setOnSaleOnly(false); }}
                         className={`font-mono text-xs sm:text-sm shadow-sm uppercase px-4 sm:px-5 py-2 border-2 transition-all flex-shrink-0 ${
-                            !selectedCategoryId && !selectedBrand
+                            !selectedCategoryId && !selectedBrand && !onSaleOnly
                             ? 'bg-black text-white border-black font-bold shadow-[3px_3px_0px_0px_rgba(204,255,0,1)] -translate-y-0.5' 
                             : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black hover:-translate-y-0.5'
                         }`}
                     >
                         Todos
+                    </button>
+                    <button
+                        onClick={() => { setOnSaleOnly(!onSaleOnly); setSelectedCategoryId(null); setSelectedTypeId(null); setSelectedSubcategoryId(null); setSelectedBrand(null); }}
+                        className={`font-mono text-xs sm:text-sm shadow-sm uppercase px-4 sm:px-5 py-2 border-2 transition-all flex-shrink-0 ${
+                            onSaleOnly
+                            ? 'bg-red-600 text-white border-black font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5' 
+                            : 'bg-white text-red-500 border-red-200 hover:border-red-600 hover:text-red-600 hover:-translate-y-0.5'
+                        }`}
+                    >
+                        % Ofertas
                     </button>
                     {selectedBrand && (
                         <button
@@ -947,12 +988,26 @@ export default function Storefront() {
                         <span className="font-mono text-sm uppercase font-bold">Solo en Stock</span>
                     </label>
 
-                    {(priceMin || priceMax || inStockOnly || searchQuery || selectedCategoryId || sortBy !== 'featured') && (
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                        <div className={`w-5 h-5 flex justify-center items-center border-2 transition-colors ${onSaleOnly ? 'bg-red-600 border-black text-white' : 'bg-white border-gray-300 group-hover:border-black'}`}>
+                            {onSaleOnly && <Check className="w-4 h-4" strokeWidth={4} />}
+                        </div>
+                        <input 
+                            type="checkbox" 
+                            className="hidden" 
+                            checked={onSaleOnly}
+                            onChange={(e) => setOnSaleOnly(e.target.checked)}
+                        />
+                        <span className="font-mono text-sm uppercase font-bold text-red-600">Solo Ofertas</span>
+                    </label>
+
+                    {(priceMin || priceMax || inStockOnly || onSaleOnly || searchQuery || selectedCategoryId || sortBy !== 'featured') && (
                          <button 
                             onClick={() => { 
                                 setPriceMin(''); 
                                 setPriceMax(''); 
                                 setInStockOnly(false); 
+                                setOnSaleOnly(false);
                                 setSearchQuery(''); 
                                 setSelectedCategoryId(null);
                                 setSelectedSubcategoryId(null);
@@ -968,6 +1023,17 @@ export default function Storefront() {
             )}
 
         </div>
+
+        {/* Banner de Ofertas si el filtro está activo */}
+        {onSaleOnly && (
+            <div className="bg-red-600 text-white p-6 sm:px-8 flex justify-between items-center border-b-2 border-black animate-fade-in">
+                <div>
+                    <h2 className="text-3xl font-black uppercase tracking-tighter italic">ZONA DE OFFERS</h2>
+                    <p className="font-mono text-[10px] sm:text-xs uppercase opacity-80 tracking-widest">Aprovecha los descuentos exclusivos en piezas seleccionadas.</p>
+                </div>
+                <div className="text-5xl font-black opacity-10 hidden lg:block italic tracking-tighter">SALE SALE SALE</div>
+            </div>
+        )}
 
         {/* Búsqueda en Móviles (Opcional, pero cubierto por la barra) */}
         <div className="sm:hidden px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center">
@@ -1023,7 +1089,7 @@ export default function Storefront() {
       </main>
 
       <footer className="bg-black text-white py-10 mt-auto border-t-8 border-neon-green text-center font-mono text-xs text-gray-500 uppercase">
-          © 2024 Jus Chiri International. All rights reserved.
+          Copyright © 2026 Jus Chiri International. All rights reserved.
       </footer>
     </div>
   );

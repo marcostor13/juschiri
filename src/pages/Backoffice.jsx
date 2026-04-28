@@ -28,6 +28,7 @@ const ProductRow = React.memo(({ p, onEdit, onDelete }) => (
         <td className="px-6 py-3 border-r border-gray-100 text-xs font-bold uppercase truncate max-w-[250px]">{p.nombre}</td>
         <td className="px-6 py-3 border-r border-gray-100 italic">{p.marca}</td>
         <td className="px-6 py-3 border-r border-gray-100 font-bold">S/. {p.precio}</td>
+        <td className="px-6 py-3 border-r border-gray-100 font-bold text-red-500">{p.descuento ? `${p.descuento}%` : '-'}</td>
         <td className="px-6 py-3 border-r border-gray-100">
             <span className={`font-bold ${p.stock_actual > 0 ? 'text-green-600' : 'text-red-500'}`}>{p.stock_actual}</span>
             <span className="text-gray-300 mx-1">/</span>
@@ -159,7 +160,7 @@ export default function Backoffice() {
 
   const openModal = (product = null) => {
     setCurrentProduct(product || {
-      codigo: '', nombre: '', marca: '', precio: 0, 
+      codigo: '', nombre: '', marca: '', precio: 0, descuento: 0,
       stock_actual: 0, stock_anterior: 0, imagen_url: '', 
       galeria: [], variantes: [],
       category: '', type: '', subcategory: ''
@@ -454,6 +455,7 @@ export default function Backoffice() {
                                         <th className="px-6 py-4 border-r border-white/10">Nombre</th>
                                         <th className="px-6 py-4 border-r border-white/10">Marca</th>
                                         <th className="px-6 py-4 border-r border-white/10">Precio</th>
+                                        <th className="px-6 py-4 border-r border-white/10 text-red-400">Dscto</th>
                                         <th className="px-6 py-4 border-r border-white/10">Stock</th>
                                         <th className="px-6 py-4">Acciones</th>
                                     </tr>
@@ -540,10 +542,14 @@ export default function Backoffice() {
                                     <label className="block font-mono text-[10px] font-bold uppercase mb-1">Nombre</label>
                                     <input required className="w-full p-3 border-2 border-black font-mono text-sm uppercase" value={currentProduct.nombre} onChange={e => setCurrentProduct({...currentProduct, nombre: e.target.value.toUpperCase()})} />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <div>
                                         <label className="block font-mono text-[10px] font-bold uppercase mb-1 focus:bg-neon-green">Precio</label>
                                         <input type="number" required className="w-full p-3 border-2 border-black font-mono text-sm" value={currentProduct.precio} onChange={e => setCurrentProduct({...currentProduct, precio: Number(e.target.value)})} />
+                                    </div>
+                                    <div>
+                                        <label className="block font-mono text-[10px] font-bold uppercase mb-1 text-red-500">Dscto (%)</label>
+                                        <input type="number" min="0" max="100" className="w-full p-3 border-2 border-black font-mono text-sm" value={currentProduct.descuento || 0} onChange={e => setCurrentProduct({...currentProduct, descuento: Number(e.target.value)})} />
                                     </div>
                                     <div>
                                         <label className="block font-mono text-[10px] font-bold uppercase mb-1">Stock Global</label>

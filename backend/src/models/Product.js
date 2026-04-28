@@ -12,6 +12,7 @@ const ProductSchema = new mongoose.Schema(
     subcategory:    { type: mongoose.Schema.Types.ObjectId, ref: 'Subcategory', default: null },
     marca:          { type: String, trim: true },
     precio:         { type: Number, required: true, min: 0 },
+    descuento:      { type: Number, default: 0, min: 0, max: 100 },
     galeria:        [{ type: String }],
     variantes:      [{
       talla: String,

@@ -82,7 +82,8 @@ export default function ProductDetail() {
           if (colores.length > 0 && !selectedColor) return alert("Por favor selecciona un color");
       }
       
-      const item = { ...product };
+      const finalPrice = product.descuento > 0 ? product.precio * (1 - product.descuento / 100) : product.precio;
+      const item = { ...product, precio: finalPrice, precio_original: product.precio };
       if (hasVariants) {
           item.talla = selectedTalla;
           item.color = selectedColor;
@@ -142,7 +143,15 @@ export default function ProductDetail() {
                 <div className="space-y-2 animate-fade-up">
                     <p className="font-mono text-gray-500 font-bold uppercase tracking-widest">{product.marca || 'GENÉRICO'}</p>
                     <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none">{product.nombre}</h1>
-                    <p className="text-3xl font-black text-neon-green drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] mt-4">S/. {product.precio?.toLocaleString()}</p>
+                    {product.descuento > 0 ? (
+                        <div className="mt-6 flex items-baseline gap-4">
+                            <p className="text-4xl font-black text-red-600 drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]">S/. {(product.precio * (1 - product.descuento / 100)).toLocaleString()}</p>
+                            <p className="text-xl font-bold text-gray-400 line-through decoration-red-500/50 decoration-4">S/. {product.precio?.toLocaleString()}</p>
+                            <span className="bg-neon-green text-black text-xs font-black px-3 py-1.5 uppercase border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform rotate-2 inline-block">-{product.descuento}% OFF</span>
+                        </div>
+                    ) : (
+                        <p className="text-3xl font-black text-neon-green drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] mt-4">S/. {product.precio?.toLocaleString()}</p>
+                    )}
                 </div>
 
                 <div className="space-y-6 border-t-4 border-black pt-6 animate-fade-up" style={{animationDelay: '100ms'}}>
