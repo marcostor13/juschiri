@@ -72,6 +72,7 @@ export default function Backoffice() {
 
   const [settings, setSettings] = useState({ 
     whatsapp_number: '',
+    announcement_text: '',
     hero_slides: [],
     trending_gallery: []
   });
@@ -461,6 +462,30 @@ export default function Backoffice() {
                         </div>
                     </div>
 
+                    {/* Announcement Bar Editor */}
+                    <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm animate-fade-in mt-6">
+                        <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-5">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Barra de Anuncios</h3>
+                                <p className="text-sm text-gray-400 mt-1">Texto rotativo en la parte superior de la tienda.</p>
+                            </div>
+                            <button 
+                                onClick={() => handleSaveSetting('announcement_text', settings.announcement_text)}
+                                className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-800 transition-all shadow-lg shadow-black/5"
+                            >
+                                Guardar Texto
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <input 
+                                placeholder="• ENVÍOS GRATIS +S/.500 • SOLO ORIGINALES •" 
+                                className="w-full p-4 bg-gray-50 border border-transparent rounded-2xl font-bold text-sm focus:bg-white focus:border-black transition-all outline-none" 
+                                value={settings.announcement_text || ''} 
+                                onChange={e => setSettings({ ...settings, announcement_text: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
                     {/* Hero Slider Editor */}
                     <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm animate-fade-in">
                         <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-5">
@@ -620,7 +645,7 @@ export default function Backoffice() {
                                 onClick={() => {
                                     setSettings({
                                         ...settings, 
-                                        trending_gallery: [...(settings.trending_gallery||[]), { brand: '', name: '', img: '', color: 'bg-gray-100' }]
+                                        trending_gallery: [...(settings.trending_gallery||[]), { brand: '', name: '', img: '', color: '#f3f4f6' }]
                                     });
                                 }}
                                 className="border-2 border-dashed border-gray-200 rounded-2xl p-6 bg-white hover:border-gray-900 hover:bg-gray-50 transition-all flex flex-col items-center justify-center gap-3 min-h-[300px] text-gray-400 hover:text-black"

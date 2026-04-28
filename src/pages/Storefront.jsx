@@ -12,13 +12,16 @@ const isVideo = (url) => url && url.match(/\.(mp4|webm|ogg|mov)$/i);
 
 // --- COMPONENTS ---
 
-const Marquee = () => (
-  <div className="bg-gray-100 text-gray-500 overflow-hidden py-2 border-b border-gray-200 whitespace-nowrap sticky top-0 z-[60]">
-    <div className="animate-marquee inline-block text-xs font-medium tracking-widest uppercase">
-      &nbsp;• ENVÍOS GRATIS +S/.500 • SOLO ORIGINALES • NUEVOS DROPS CADA VIERNES • JUS CHIRI EXCLUSIVE • ENVÍOS GRATIS +S/.500 • SOLO ORIGINALES •
+const Marquee = ({ text }) => {
+  const content = text || '• ENVÍOS GRATIS +S/.500 • SOLO ORIGINALES • NUEVOS DROPS CADA VIERNES • JUS CHIRI EXCLUSIVE •';
+  return (
+    <div className="bg-black text-white overflow-hidden py-2.5 whitespace-nowrap sticky top-0 z-[60]">
+      <div className="animate-marquee inline-block text-[10px] font-bold tracking-[0.2em] uppercase">
+        &nbsp;{content} &nbsp;&nbsp;&nbsp; {content} &nbsp;&nbsp;&nbsp; {content} &nbsp;&nbsp;&nbsp; {content}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const Navbar = ({ cartCount, onOpenCart, searchQuery, setSearchQuery, onOpenMenu }) => {
   const [showSearch, setShowSearch] = useState(false);
@@ -171,6 +174,9 @@ const HeroSlider = ({ customSlides }) => {
                             className={`absolute inset-0 w-full h-full object-cover transition-transform duration-[10000ms] ease-out ${idx === current ? 'scale-110' : 'scale-100'}`}
                             src={slide.img}
                             alt={slide.title}
+                            loading={idx === 0 ? "eager" : "lazy"}
+                            fetchpriority={idx === 0 ? "high" : "auto"}
+                            decoding="async"
                         />
                     </div>
                 </div>
@@ -219,7 +225,7 @@ const TrendingGallery = ({ customGallery }) => {
                             className={`aspect-[4/5] rounded-xl overflow-hidden mb-4 relative ${!item.color?.startsWith('#') ? item.color : ''}`}
                             style={{ backgroundColor: item.color?.startsWith('#') ? item.color : undefined }}
                         >
-                            <img src={item.img} alt={item.name} className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-700" />
+                            <img src={item.img} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-700" />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300"></div>
                         </div>
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{item.brand}</p>
@@ -267,18 +273,37 @@ const ProductCard = React.memo(({ product, onAddToCart }) => {
         </div>
       )}
       {isVideo(product.imagen_url) ? (
-        <video
-          src={product.imagen_url}
-          autoPlay loop muted playsInline
-          className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out"
-        />
+        <>
+            <video
+              src={product.imagen_url}
+              autoPlay loop muted playsInline
+              className={`absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply transition-all duration-700 ease-out z-10 ${product.galeria && product.galeria.length > 0 ? 'group-hover:opacity-0 group-hover:scale-95' : 'group-hover:scale-105'}`}
+            />
+            {product.galeria && product.galeria.length > 0 && (
+                isVideo(product.galeria[0]) ? (
+                    <video src={product.galeria[0]} autoPlay loop muted playsInline className="absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out z-0 scale-105 group-hover:scale-100" />
+                ) : (
+                    <img src={product.galeria[0]} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out z-0 scale-105 group-hover:scale-100" />
+                )
+            )}
+        </>
       ) : (
-        <img
-          src={product.imagen_url || 'https://via.placeholder.com/400?text=No+Image'}
-          alt={product.nombre}
-          loading="lazy"
-          className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out mix-blend-multiply"
-        />
+        <>
+            <img
+              src={product.imagen_url || 'https://via.placeholder.com/400?text=No+Image'}
+              alt={product.nombre}
+              loading="lazy"
+              decoding="async"
+              className={`absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply transition-all duration-700 ease-out z-10 ${product.galeria && product.galeria.length > 0 ? 'group-hover:opacity-0 group-hover:scale-95' : 'group-hover:scale-105'}`}
+            />
+            {product.galeria && product.galeria.length > 0 && (
+                isVideo(product.galeria[0]) ? (
+                    <video src={product.galeria[0]} autoPlay loop muted playsInline className="absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out z-0 scale-105 group-hover:scale-100" />
+                ) : (
+                    <img src={product.galeria[0]} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out z-0 scale-105 group-hover:scale-100" />
+                )
+            )}
+        </>
       )}
     </Link>
     <div className="p-4 flex-1 flex flex-col justify-between">
@@ -825,7 +850,7 @@ export default function Storefront() {
           />
       )}
 
-      <Marquee />
+      <Marquee text={settings.announcement_text} />
       
       <Navbar 
         cartCount={cart.length} 
