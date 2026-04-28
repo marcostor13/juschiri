@@ -1,13 +1,39 @@
 const router = require('express').Router();
 const connectDB = require('../db');
 const Category = require('../models/Category');
+const Type = require('../models/Type');
+const Subcategory = require('../models/Subcategory');
 
 // GET /api/categories
 router.get('/', async (req, res) => {
   try {
     await connectDB();
-    const categories = await Category.find().sort({ name: 1 }).lean();
-    res.json(categories);
+    const [categories, types, subcategories] = await Promise.all([
+      Category.find().sort({ name: 1 }).lean(),
+      Type.find().sort({ name: 1 }).lean(),
+      Subcategory.find().sort({ name: 1 }).lean(),
+    ]);
+
+    // Anidar subcategorías en sus tipos correspondientes, y los tipos en sus categorías
+    const result = categories.map((cat) => {
+      const catTypes = types.filter(t => t.category?.toString() === cat._id.toString());
+      
+      const populatedTypes = catTypes.map(t => ({
+        ...t,
+        subcategories: subcategories.filter(sub => sub.type?.toString() === t._id.toString())
+      }));
+
+      // También mantener subcategorías directas por retrocompatibilidad momentánea
+      const directSubcategories = subcategories.filter(sub => sub.category?.toString() === cat._id.toString() && !sub.type);
+
+      return {
+        ...cat,
+        types: populatedTypes,
+        subcategories: directSubcategories.length > 0 ? directSubcategories : []
+      };
+    });
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

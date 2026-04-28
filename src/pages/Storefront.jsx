@@ -1,25 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, X, Menu, Search, Instagram, ArrowRight, Check, CreditCard, Truck, MapPin, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
+import { Notification, ConfirmModal } from '../components/ui';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // --- UTILS ---
 const formatPrice = (price) => `S/. ${(price || 0).toLocaleString('es-PE')}`;
 
-const SUPER_SECTIONS = ['Todos', 'Zapatillas', 'Ropa', 'Accesorios', 'Cuidado', 'Otros'];
 
-const getSectionForProduct = (categorias) => {
-  if (!categorias || categorias.length === 0) return 'Otros';
-  const text = categorias.join(' ').toUpperCase();
-  
-  if (/(LIMPIEZA|REPELENTE|ACONDICIONADOR|PAñOS)/.test(text)) return 'Cuidado';
-  if (/(HOODIE|SHIRT|PANTALON|JEANS|CASACA|CAMISA|SHORT|POLERA|SWEATER|SUETER|JACKET|CONJUNTO|BUZO|PANTS|BOXER|CAFARENA|TOP|JERSEY|MEDIAS|LONG SLEEVE)/.test(text)) return 'Ropa';
-  if (/(BILLETERA|WALLET|CARTERA|CORREA|GORRA|MOCHILA|MORRAL|PELUCHE|TAZAS|TOALLA|LENTES|GLASSES|MUñECO|TARJETERO|ENCENDEDOR)/.test(text)) return 'Accesorios';
-  if (/(JORDAN|YEEZY|AF1|AIR FORCE|DUNK|AIR MAX|350|700|BAPE|TRAINER|SLIDE|OODSY|CLASSIC|CAMPUS|GAZELLE|SHOX|RESPONSE|CONVERSE|VANS|VULC|SNEAKER|LOW|HIGH|MID|BOOT|PORTOFINO|SANDALIA|SKEL)/.test(text)) return 'Zapatillas';
-  
-  return 'Otros';
-};
 
 // --- COMPONENTS ---
 
@@ -33,6 +23,32 @@ const Marquee = () => (
 
 const Navbar = ({ cartCount, onOpenCart, searchQuery, setSearchQuery, onOpenMenu }) => {
   const [showSearch, setShowSearch] = useState(false);
+  const [isBumping, setIsBumping] = useState(false);
+
+  useEffect(() => {
+      if (cartCount > 0) {
+          setIsBumping(true);
+          const timer = setTimeout(() => setIsBumping(false), 400);
+          return () => clearTimeout(timer);
+      }
+  }, [cartCount]);
+
+  const handleToggleSearch = () => {
+      if (showSearch) {
+          setSearchQuery('');
+      }
+      setShowSearch(!showSearch);
+  };
+
+  const handleSearchChange = (e) => {
+      setSearchQuery(e.target.value);
+      if (e.target.value) {
+          // Si escribe, asegurar scroll a la tienda si está muy arriba
+          if (window.scrollY < window.innerHeight * 0.5) {
+              document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
+          }
+      }
+  };
 
   return (
     <nav className="sticky top-9 z-50 bg-white border-b-2 border-black">
@@ -42,16 +58,19 @@ const Navbar = ({ cartCount, onOpenCart, searchQuery, setSearchQuery, onOpenMenu
             <Menu className="w-8 h-8 cursor-pointer hover:opacity-50 transition-opacity" onClick={onOpenMenu} />
             <div className={`hidden sm:flex items-center transition-all overflow-hidden ${showSearch ? 'w-64 border-b-2 border-black' : 'w-6'}`}>
                 <Search 
-                    className="w-6 h-6 cursor-pointer hover:opacity-50 flex-shrink-0" 
-                    onClick={() => setShowSearch(!showSearch)}
+                    className={`w-6 h-6 cursor-pointer hover:opacity-50 flex-shrink-0 ${showSearch ? 'text-neon-green fill-black' : ''}`} 
+                    onClick={handleToggleSearch}
                 />
                 <input 
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={handleSearchChange}
                     placeholder="Buscar producto, marca..."
                     className={`ml-2 outline-none font-mono text-sm w-full bg-transparent transition-opacity duration-300 ${showSearch ? 'opacity-100' : 'opacity-0'}`}
                 />
+                {showSearch && searchQuery && (
+                    <X className="w-4 h-4 cursor-pointer hover:text-red-500" onClick={() => setSearchQuery('')} />
+                )}
             </div>
           </div>
 
@@ -62,11 +81,15 @@ const Navbar = ({ cartCount, onOpenCart, searchQuery, setSearchQuery, onOpenMenu
           <div className="flex items-center justify-end w-1/3 gap-6">
             <button 
               onClick={onOpenCart}
-              className="relative p-2 hover:bg-black hover:text-white transition-colors border-2 border-transparent hover:border-black rounded-none group"
+              className={`relative p-2 transition-all duration-300 border-2 rounded-none group ${
+                  isBumping 
+                  ? 'bg-neon-green text-black border-black scale-110 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-10' 
+                  : 'hover:bg-black hover:text-white border-transparent hover:border-black'
+              }`}
             >
               <div className="flex items-center gap-2">
                   <span className="font-mono font-bold text-sm hidden sm:block">CART [{cartCount}]</span>
-                  <ShoppingBag className="w-6 h-6" />
+                  <ShoppingBag className={`w-6 h-6 transition-transform ${isBumping ? '-rotate-12 scale-110' : ''}`} />
               </div>
             </button>
           </div>
@@ -104,9 +127,26 @@ const Hero = () => (
   </div>
 );
 
-const ProductCard = React.memo(({ product, onAddToCart }) => (
+const ProductCard = React.memo(({ product, onAddToCart }) => {
+  const navigate = useNavigate();
+  const [isAdded, setIsAdded] = useState(false);
+  const hasVariants = product.variantes && product.variantes.length > 0;
+
+  const handleAdd = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (hasVariants) {
+          navigate(`/producto/${product.codigo}`);
+          return;
+      }
+      onAddToCart(product);
+      setIsAdded(true);
+      setTimeout(() => setIsAdded(false), 1000);
+  };
+
+  return (
   <div className="group relative bg-white border-2 border-transparent hover:border-black transition-all duration-300 flex flex-col h-full animate-fade-in-up">
-    <div className="relative aspect-[4/5] bg-gray-50 overflow-hidden border-b-2 border-gray-100 group-hover:border-black transition-colors flex items-center justify-center p-4">
+    <Link to={`/producto/${product.codigo}`} className="relative aspect-[4/5] bg-gray-50 overflow-hidden border-b-2 border-gray-100 group-hover:border-black transition-colors flex items-center justify-center p-4 block">
       {product.stock_actual <= 0 && (
         <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-3 py-1 uppercase border-l-2 border-b-2 border-black z-10">
           Agotado
@@ -118,13 +158,17 @@ const ProductCard = React.memo(({ product, onAddToCart }) => (
         loading="lazy"
         className="h-full w-full object-contain group-hover:scale-110 transition-transform duration-700 ease-in-out mix-blend-multiply"
       />
-      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px] transition-all duration-300 ${isAdded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
         {product.stock_actual > 0 ? (
           <button
-            onClick={() => onAddToCart(product)}
-            className="bg-white text-black font-bold uppercase text-sm px-6 py-3 hover:bg-neon-green border-2 border-black transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 shadow-xl"
+            onClick={handleAdd}
+            className={`font-bold uppercase text-sm px-6 py-3 border-2 border-black transform transition-all duration-300 shadow-xl ${
+                isAdded 
+                ? 'bg-neon-green text-black translate-y-0 scale-105 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]' 
+                : 'bg-white text-black hover:bg-neon-green translate-y-4 group-hover:translate-y-0'
+            }`}
           >
-            Agregar al Carrito
+            {isAdded ? 'Agregado ✓' : 'Agregar al Carrito'}
           </button>
         ) : (
           <button className="bg-gray-200 text-gray-500 font-bold uppercase text-sm px-6 py-3 border-2 border-black cursor-not-allowed">
@@ -132,23 +176,24 @@ const ProductCard = React.memo(({ product, onAddToCart }) => (
           </button>
         )}
       </div>
-    </div>
+    </Link>
     <div className="p-4 flex-1 flex flex-col justify-between">
       <div>
         <div className="flex justify-between items-start mb-2">
             <p className="font-mono text-xs text-gray-500 uppercase">{product.codigo}</p>
             <p className="font-bold text-sm uppercase tracking-wide">{product.marca}</p>
         </div>
-        <h3 className="text-sm sm:text-base font-black uppercase leading-tight mb-2 hover:underline decoration-2 line-clamp-2">
+        <Link to={`/producto/${product.codigo}`} className="text-sm sm:text-base font-black uppercase leading-tight mb-2 hover:underline decoration-2 line-clamp-2 block">
             {product.nombre}
-        </h3>
+        </Link>
       </div>
       <div className="mt-4 pt-4 border-t-2 border-gray-100 group-hover:border-black transition-colors flex justify-between items-center">
         <p className="font-mono font-bold text-lg">{formatPrice(product.precio)}</p>
       </div>
     </div>
   </div>
-));
+  );
+});
 
 const CheckoutStepIndicator = ({ step }) => (
   <div className="flex justify-between mb-8 px-2 relative">
@@ -167,7 +212,7 @@ const CheckoutStepIndicator = ({ step }) => (
   </div>
 );
 
-const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem }) => {
+const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem, whatsappNumber }) => {
     const [step, setStep] = useState('cart');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -176,6 +221,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
         direccion: '',
         telefono: ''
     });
+    const [itemToRemove, setItemToRemove] = useState(null);
 
     useEffect(() => {
         if(isOpen) {
@@ -207,6 +253,20 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
                     })
                 });
                 if (res.ok) {
+                    // Generar mensaje de WhatsApp
+                    const productList = cart.map(item => 
+                        `* ${item.nombre} (Cod: ${item.codigo}) x${item.cantidad || 1} - ${formatPrice(item.precio * (item.cantidad || 1))}`
+                    ).join('%0A');
+                    
+                    const message = `Hola, mi nombre es *${shippingData.nombre}*. Quiero comprar estos productos:%0A%0A${productList}%0A%0A*TOTAL: ${formatPrice(total)}*%0A%0A_Enviado desde la tienda web._`;
+                    
+                    const whatsappUrl = `https://wa.me/${whatsappNumber || '51921385472'}?text=${message}`;
+                    
+                    // Pequeño delay para que el usuario vea el cambio de estado antes de la redirección
+                    setTimeout(() => {
+                        window.open(whatsappUrl, '_blank');
+                    }, 1000);
+
                     setStep('success');
                     onClearCart();
                 } else {
@@ -243,8 +303,8 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
                             {cart.length === 0 ? (
                                 <p className="text-center font-mono py-10">Tu carrito está vacío.</p>
                             ) : (
-                                cart.map((item, index) => (
-                                    <div key={index} className="flex gap-4 border-b border-gray-100 pb-4">
+                                cart.map((item) => (
+                                    <div key={item.codigo} className="flex gap-4 border-b border-gray-100 pb-4">
                                         <div className="w-20 h-20 bg-gray-100 flex-shrink-0 border border-gray-200">
                                             <img src={item.imagen_url} className="w-full h-full object-contain p-1 mix-blend-multiply" alt="" />
                                         </div>
@@ -252,7 +312,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
                                             <div className="flex justify-between items-start">
                                                 <h4 className="font-bold text-sm uppercase">{item.nombre}</h4>
                                                 <button 
-                                                    onClick={() => onRemoveItem(index)}
+                                                    onClick={() => setItemToRemove(item.codigo)}
                                                     className="p-1 px-2 text-gray-300 hover:text-red-500 transition-colors"
                                                     title="Eliminar producto"
                                                 >
@@ -260,7 +320,12 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
                                                 </button>
                                             </div>
                                             <p className="text-xs font-mono text-gray-500 mb-2">{item.codigo}</p>
-                                            <p className="font-bold text-sm">{formatPrice(item.precio)}</p>
+                                            <div className="flex justify-between items-center">
+                                                <p className="font-bold text-sm">{formatPrice(item.precio)}</p>
+                                                <div className="bg-black text-white px-2 py-0.5 text-[10px] font-black uppercase">
+                                                    CANT: {item.cantidad || 1}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 ))
@@ -357,11 +422,26 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
                     </div>
                 )}
             </div>
+
+            <ConfirmModal 
+                isOpen={itemToRemove !== null}
+                title="Quitar Producto"
+                message="¿Estás seguro de que deseas quitar este producto de tu carrito?"
+                confirmText="Eliminar"
+                onConfirm={() => {
+                    onRemoveItem(itemToRemove);
+                    setItemToRemove(null);
+                }}
+                onCancel={() => setItemToRemove(null)}
+            />
         </div>
     );
 };
 
-const Sidebar = ({ isOpen, onClose, activeSegment, onSelectSegment }) => {
+const Sidebar = ({ isOpen, onClose, selectedCategoryId, onSelectCategory, allCategories, selectedTypeId, onSelectType, selectedSubcategoryId, onSelectSubcategory, brands, selectedBrand, onSelectBrand }) => {
+    const [brandSearch, setBrandSearch] = useState('');
+    const displayedBrands = brands.filter(b => b && b.toLowerCase().includes(brandSearch.toLowerCase()));
+
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[100] flex">
@@ -375,21 +455,91 @@ const Sidebar = ({ isOpen, onClose, activeSegment, onSelectSegment }) => {
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 space-y-8">
                     <div className="space-y-4">
-                        <h3 className="font-mono text-xs text-gray-500 uppercase font-bold tracking-widest">Catálogo</h3>
-                        {SUPER_SECTIONS.map(sec => (
-                            <button
-                                key={sec}
-                                onClick={() => { onSelectSegment(sec); onClose(); }}
-                                className={`block w-full text-left font-black text-2xl uppercase tracking-tighter hover:text-neon-green transition-colors ${activeSegment === sec ? 'text-black underline' : 'text-gray-400'}`}
-                            >
-                                {sec}
-                            </button>
+                        <h3 className="font-mono text-xs text-gray-500 uppercase font-bold tracking-widest border-b border-gray-200 pb-2">Catálogo</h3>
+                        <button
+                            onClick={() => { onSelectCategory(null); onSelectType(null); onSelectSubcategory(null); onClose(); }}
+                            className={`block w-full text-left font-black text-2xl uppercase tracking-tighter hover:text-neon-green transition-colors ${!selectedCategoryId && !selectedBrand ? 'text-black underline' : 'text-gray-400'}`}
+                        >
+                            Todos
+                        </button>
+                        {allCategories.map(cat => (
+                            <div key={cat._id} className="space-y-2">
+                                <button
+                                    onClick={() => { onSelectCategory(cat._id); onSelectType(null); onSelectSubcategory(null); }}
+                                    className={`block w-full text-left font-black text-xl uppercase tracking-tighter hover:text-neon-green transition-colors ${selectedCategoryId === cat._id ? 'text-black underline' : 'text-gray-400'}`}
+                                >
+                                    {cat.name}
+                                </button>
+                                {selectedCategoryId === cat._id && cat.types && cat.types.length > 0 && (
+                                    <div className="pl-4 space-y-3 border-l-2 border-neon-green ml-2 py-2">
+                                        {cat.types.map(type => (
+                                            <div key={type._id} className="space-y-2">
+                                                <button
+                                                    onClick={() => { onSelectType(type._id); onSelectSubcategory(null); }}
+                                                    className={`block w-full text-left font-bold text-md uppercase tracking-wide hover:text-black transition-colors ${selectedTypeId === type._id ? 'text-black underline' : 'text-gray-400'}`}
+                                                >
+                                                    {type.name}
+                                                </button>
+                                                {selectedTypeId === type._id && type.subcategories && type.subcategories.length > 0 && (
+                                                    <div className="pl-4 space-y-2 border-l border-gray-300 ml-1 py-1">
+                                                        <button 
+                                                            onClick={() => { onSelectSubcategory(null); onClose(); }}
+                                                            className={`block w-full text-left font-mono text-xs uppercase tracking-wide hover:text-black transition-colors ${!selectedSubcategoryId ? 'text-black font-bold' : 'text-gray-400'}`}
+                                                        >
+                                                            Todo {type.name}
+                                                        </button>
+                                                        {type.subcategories.map(sub => (
+                                                            <button 
+                                                                key={sub._id}
+                                                                onClick={() => { onSelectSubcategory(sub._id); onClose(); }}
+                                                                className={`block w-full text-left font-mono text-xs uppercase tracking-wide hover:text-black transition-colors ${selectedSubcategoryId === sub._id ? 'text-black font-bold underline' : 'text-gray-400'}`}
+                                                            >
+                                                                {sub.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         ))}
+                    </div>
+
+                    <div className="border-t-2 border-gray-100 pt-6 space-y-4">
+                        <div className="flex flex-col gap-2 border-b border-gray-200 pb-2">
+                            <h3 className="font-mono text-xs text-gray-500 uppercase font-bold tracking-widest">Marcas</h3>
+                            <input 
+                                type="text"
+                                placeholder="Buscar marca..."
+                                value={brandSearch}
+                                onChange={(e) => setBrandSearch(e.target.value)}
+                                className="w-full px-2 py-1 text-sm border-2 border-gray-200 focus:border-black outline-none font-mono uppercase"
+                            />
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar pr-2">
+                            <button
+                                onClick={() => { onSelectBrand(null); onClose(); }}
+                                className={`block w-full text-left font-mono text-sm uppercase tracking-wide hover:text-black transition-colors ${!selectedBrand ? 'text-black font-bold underline' : 'text-gray-400'}`}
+                            >
+                                Todas las marcas
+                            </button>
+                            {displayedBrands.map(brand => (
+                                <button
+                                    key={brand}
+                                    onClick={() => { onSelectBrand(brand); onClose(); }}
+                                    className={`block w-full text-left font-mono text-sm uppercase tracking-wide hover:text-black transition-colors ${selectedBrand === brand ? 'text-black font-bold underline' : 'text-gray-400'}`}
+                                >
+                                    {brand}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                     <div className="border-t-2 border-gray-100 pt-6 space-y-4">
                         <h3 className="font-mono text-xs text-gray-500 uppercase font-bold tracking-widest">Portal</h3>
                         <a href="/admin" className="flex items-center gap-2 text-sm font-bold uppercase hover:underline">
-                            Panel Ténico / Admin
+                            Panel Técnico / Admin
                         </a>
                     </div>
                 </div>
@@ -397,44 +547,56 @@ const Sidebar = ({ isOpen, onClose, activeSegment, onSelectSegment }) => {
         </div>
     );
 };
-
 export default function Storefront() {
-  const [activeSegment, setActiveSegment] = useState("Todos");
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(24);
+  const [allCategories, setAllCategories] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [selectedTypeId, setSelectedTypeId] = useState(null);
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState(null);
+  const [selectedBrand, setSelectedBrand] = useState(null);
+  const [sortBy, setSortBy] = useState('featured');
+
   const observerRef = useRef(null);
 
   const cart = useCartStore(state => state.cart);
   const addToCartAction = useCartStore(state => state.addToCart);
   const removeFromCart = useCartStore(state => state.removeFromCart);
   const clearCart = useCartStore(state => state.clearCart);
-  const cartTotal = cart.reduce((sum, item) => sum + (item.precio || 0), 0);
+  const cartTotal = cart.reduce((sum, item) => sum + (item.precio || 0) * (item.cantidad || 1), 0);
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [notification, setNotification] = useState(null);
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
+  const [settings, setSettings] = useState({ whatsapp_number: '' });
+
+  const showNotification = useCallback((message, type = 'info') => {
+      setNotification({ show: true, message, type });
+      setTimeout(() => setNotification({ show: false, message: '', type: 'info' }), 3000);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const prodRes = await fetch(`${API_URL}/products?limit=2500`);
+        const [prodRes, catRes, setRes] = await Promise.all([
+          fetch(`${API_URL}/products?limit=2500`),
+          fetch(`${API_URL}/categories`),
+          fetch(`${API_URL}/settings`)
+        ]);
+        
         const prodData = await prodRes.json();
+        const catData = await catRes.json();
+        const setData = await setRes.json();
         
-        // Asignamos la súper-sección a cada producto para no recalcular
-        const mappedProducts = (prodData.products || []).map(p => ({
-            ...p,
-            superSection: getSectionForProduct(p.categorias)
-        }));
-        
-        setProducts(mappedProducts);
+        setProducts(prodData.products || []);
+        setAllCategories(catData || []);
+        setSettings(prev => ({ ...prev, ...setData }));
       } catch (err) {
         console.error("Error fetching data:", err);
       }
@@ -445,42 +607,54 @@ export default function Storefront() {
 
   const handleAddToCart = useCallback((product) => {
     addToCartAction(product);
-    setNotification(`${product.nombre} agregado al carrito`);
-    setTimeout(() => setNotification(null), 3000);
-  }, [addToCartAction]);
+    showNotification(`${product.nombre} agregado al carrito`, 'success');
+  }, [addToCartAction, showNotification]);
+
+  const availableBrands = useMemo(() => {
+    const brands = new Set(products.map(p => p.marca).filter(Boolean));
+    return Array.from(brands).sort();
+  }, [products]);
 
   // FILTER LOGIC - Memoized for performance
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      if (activeSegment !== 'Todos' && p.superSection !== activeSegment) return false;
+    let result = products.filter(p => {
+      if (p.precio <= 0) return false;
+      if (selectedCategoryId && p.category?._id !== selectedCategoryId) return false;
+      if (selectedTypeId && p.type?._id !== selectedTypeId) return false;
+      if (selectedSubcategoryId && p.subcategory?._id !== selectedSubcategoryId) return false;
+      if (selectedBrand && (!p.marca || p.marca.trim().toLowerCase() !== selectedBrand.trim().toLowerCase())) return false;
       if (searchQuery) {
           const q = searchQuery.toLowerCase();
-          const textToSearch = `${p.nombre} ${p.marca} ${p.codigo}`.toLowerCase();
+          const textToSearch = `${p.nombre || ''} ${p.marca || ''} ${p.codigo || ''}`.toLowerCase();
           if (!textToSearch.includes(q)) return false;
       }
       if (priceMin && p.precio < Number(priceMin)) return false;
       if (priceMax && p.precio > Number(priceMax)) return false;
       if (inStockOnly && p.stock_actual <= 0) return false;
       return true;
-    }).sort((a, b) => {
-      // Priority 1: Stock
+    });
+
+    // Sorteo
+    result.sort((a, b) => {
+      if (sortBy === 'price_asc') return a.precio - b.precio;
+      if (sortBy === 'price_desc') return b.precio - a.precio;
+      if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+      
+      // Default / Featured: Stock + Image + Price
       const stockA = a.stock_actual > 0 ? 1 : 0;
       const stockB = b.stock_actual > 0 ? 1 : 0;
       if (stockA !== stockB) return stockB - stockA;
 
-      // Priority 2: Has Image
       const imgA = (a.imagen_url && !a.imagen_url.includes('placeholder')) ? 1 : 0;
       const imgB = (b.imagen_url && !b.imagen_url.includes('placeholder')) ? 1 : 0;
       if (imgA !== imgB) return imgB - imgA;
 
-      // Priority 3: Has Price (assuming > 0 is better than 0 or null)
-      const priceA = a.precio > 0 ? 1 : 0;
-      const priceB = b.precio > 0 ? 1 : 0;
-      if (priceA !== priceB) return priceB - priceA;
-
       return 0;
     });
-  }, [products, activeSegment, searchQuery, priceMin, priceMax, inStockOnly]);
+
+    return result;
+  }, [products, selectedCategoryId, selectedTypeId, selectedSubcategoryId, selectedBrand, searchQuery, priceMin, priceMax, inStockOnly, sortBy]);
+
 
   // Infinite Scroll Trigger
   const lastElementRef = useCallback(node => {
@@ -497,15 +671,16 @@ export default function Storefront() {
   // Reset limit on filter change
   useEffect(() => {
     setDisplayLimit(24);
-  }, [activeSegment, searchQuery, priceMin, priceMax, inStockOnly]);
+  }, [selectedCategoryId, selectedSubcategoryId, searchQuery, priceMin, priceMax, inStockOnly]);
 
   return (
     <div className="font-sans antialiased bg-white text-gray-900 selection:bg-neon-green min-h-screen flex flex-col">
-      {notification && (
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-[70] bg-black text-white px-6 py-3 font-bold uppercase tracking-wide shadow-2xl flex items-center gap-2 border border-neon-green">
-            <Check className="w-4 h-4 text-neon-green" />
-            {notification}
-        </div>
+      {notification.show && (
+          <Notification 
+            type={notification.type} 
+            message={notification.message} 
+            onClose={() => setNotification({ ...notification, show: false })} 
+          />
       )}
 
       <Marquee />
@@ -521,42 +696,91 @@ export default function Storefront() {
       <Sidebar 
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)} 
-        activeSegment={activeSegment}
-        onSelectSegment={(sec) => {
-            setActiveSegment(sec);
+        allCategories={allCategories}
+        selectedCategoryId={selectedCategoryId}
+        selectedTypeId={selectedTypeId}
+        selectedSubcategoryId={selectedSubcategoryId}
+        brands={availableBrands}
+        selectedBrand={selectedBrand}
+        onSelectBrand={(brand) => {
+            setSelectedBrand(brand);
+            setSelectedCategoryId(null);
+            setSelectedTypeId(null);
+            setSelectedSubcategoryId(null);
+            document.getElementById('shop').scrollIntoView({ behavior: 'smooth' });
+        }}
+        onSelectType={(id) => {
+             setSelectedTypeId(id);
+             setSelectedSubcategoryId(null);
+             setSelectedBrand(null);
+        }}
+        onSelectCategory={(id) => {
+            setSelectedCategoryId(id);
+            setSelectedTypeId(null);
+            setSelectedSubcategoryId(null);
+            setSelectedBrand(null);
+            // El click en categoría no hace scroll ni cierra, solo abre acordeón si hay subcategorías
+            if (!id || allCategories.find(c => c._id === id)?.types?.length === 0) {
+                 document.getElementById('shop').scrollIntoView({ behavior: 'smooth' });
+                 setIsSidebarOpen(false);
+            }
+        }}
+        onSelectSubcategory={(id) => {
+            setSelectedSubcategoryId(id);
             document.getElementById('shop').scrollIntoView({ behavior: 'smooth' });
         }}
       />
       
       <CheckoutModal 
         isOpen={isCheckoutOpen} 
-        onClose={() => setIsCheckoutOpen(false)}
+        onClose={() => setIsCheckoutOpen(false)} 
         cart={cart}
         total={cartTotal}
         onClearCart={clearCart}
         onRemoveItem={removeFromCart}
+        whatsappNumber={settings.whatsapp_number}
       />
 
       <Hero />
 
       <main id="shop" className="flex-1 w-full max-w-[1920px] mx-auto">
         {/* Nav sticky (Pills & Filtros Toggle) */}
-        <div className="sticky top-28 z-40 bg-white/95 backdrop-blur-md border-b-2 border-black">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:px-8 gap-4">
+        <div className="sticky top-20 sm:top-28 z-40 bg-white/95 backdrop-blur-md border-b-2 border-black flex flex-col transition-all">
+            <div className="flex justify-between items-center p-3 sm:p-4 sm:px-8 gap-2 sm:gap-4 border-b border-gray-100/50">
                 
-                {/* Categorías Principales */}
-                <div className="flex gap-3 min-w-max overflow-x-auto no-scrollbar w-full sm:w-auto pb-2 sm:pb-0">
-                    {SUPER_SECTIONS.map((sec) => (
+                {/* Categorías Principales y Filtros Activos */}
+                <div className="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar w-full py-1">
+                    <button
+                        onClick={() => { setSelectedCategoryId(null); setSelectedTypeId(null); setSelectedSubcategoryId(null); setSelectedBrand(null); }}
+                        className={`font-mono text-xs sm:text-sm shadow-sm uppercase px-4 sm:px-5 py-2 border-2 transition-all flex-shrink-0 ${
+                            !selectedCategoryId && !selectedBrand
+                            ? 'bg-black text-white border-black font-bold shadow-[3px_3px_0px_0px_rgba(204,255,0,1)] -translate-y-0.5' 
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black hover:-translate-y-0.5'
+                        }`}
+                    >
+                        Todos
+                    </button>
+                    {selectedBrand && (
                         <button
-                            key={sec}
-                            onClick={() => setActiveSegment(sec)}
-                            className={`font-mono text-sm shadow-sm uppercase px-5 py-2 border-2 transition-all flex-shrink-0 ${
-                                activeSegment === sec 
+                            onClick={() => setSelectedBrand(null)}
+                            className="font-mono text-xs sm:text-sm shadow-sm uppercase px-4 sm:px-5 py-2 border-2 transition-all flex-shrink-0 bg-neon-green text-black border-black font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5 flex items-center gap-2 group"
+                            title="Quitar filtro de marca"
+                        >
+                            Marca: {selectedBrand}
+                            <X className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-125 transition-transform" />
+                        </button>
+                    )}
+                    {allCategories.map((cat) => (
+                        <button
+                            key={cat._id}
+                            onClick={() => { setSelectedCategoryId(cat._id); setSelectedTypeId(null); setSelectedSubcategoryId(null); setSelectedBrand(null); }}
+                            className={`font-mono text-xs sm:text-sm shadow-sm uppercase px-4 sm:px-5 py-2 border-2 transition-all flex-shrink-0 ${
+                                selectedCategoryId === cat._id
                                 ? 'bg-black text-white border-black font-bold shadow-[3px_3px_0px_0px_rgba(204,255,0,1)] -translate-y-0.5' 
                                 : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black hover:-translate-y-0.5'
                             }`}
                         >
-                            {sec}
+                            {cat.name}
                         </button>
                     ))}
                 </div>
@@ -564,16 +788,133 @@ export default function Storefront() {
                 {/* Botón Switch Filtros */}
                 <button 
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center gap-2 font-mono font-bold text-sm uppercase px-4 py-2 border-2 transition-colors ${showFilters ? 'bg-neon-green border-black' : 'bg-white border-gray-200 hover:border-black'}`}
+                  className={`flex-shrink-0 flex items-center justify-center gap-2 font-mono font-bold text-sm uppercase px-3 sm:px-4 py-2 border-2 transition-colors ${showFilters ? 'bg-neon-green border-black text-black' : 'bg-white border-gray-200 text-gray-600 hover:border-black hover:text-black'}`}
+                  title="Filtros"
                 >
-                  <SlidersHorizontal className="w-4 h-4" />
-                  Filtros
+                  <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden sm:inline">Filtros</span>
                 </button>
             </div>
+
+            {/* Tipos y Subcategorías Secundarias (Si hay categoría activa) */}
+            {selectedCategoryId && allCategories.find(c => c._id === selectedCategoryId)?.types?.length > 0 && (
+                <div className="bg-gray-50/90 border-b border-gray-200 flex flex-col w-full shadow-inner">
+                    {/* Fila de Tipos */}
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 sm:px-8 py-2 border-b border-gray-100">
+                        <button
+                            onClick={() => { setSelectedTypeId(null); setSelectedSubcategoryId(null); }}
+                            className={`font-mono text-[10px] sm:text-xs uppercase px-4 py-1.5 border-2 transition-all flex-shrink-0 rounded-full ${
+                                !selectedTypeId
+                                ? 'bg-black text-white border-black font-bold shadow-[2px_2px_0px_0px_rgba(204,255,0,1)]' 
+                                : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black'
+                            }`}
+                        >
+                            Ver Todo
+                        </button>
+                        {allCategories.find(c => c._id === selectedCategoryId).types.map((type) => (
+                            <button
+                                key={type._id}
+                                onClick={() => { setSelectedTypeId(type._id); setSelectedSubcategoryId(null); }}
+                                className={`font-mono text-[10px] sm:text-xs uppercase px-4 py-1.5 border-2 transition-all flex-shrink-0 rounded-full ${
+                                    selectedTypeId === type._id
+                                    ? 'bg-black text-white border-black font-bold shadow-[2px_2px_0px_0px_rgba(204,255,0,1)]' 
+                                    : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black'
+                                }`}
+                            >
+                                {type.name}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Fila de Subcategorías si hay un tipo seleccionado */}
+                    {selectedTypeId && allCategories.find(c => c._id === selectedCategoryId)?.types?.find(t => t._id === selectedTypeId)?.subcategories?.length > 0 && (
+                        <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 sm:px-8 py-2 bg-gray-100/50">
+                            <button
+                                onClick={() => setSelectedSubcategoryId(null)}
+                                className={`font-mono text-[10px] sm:text-xs uppercase px-4 py-1 border transition-all flex-shrink-0 ${
+                                    !selectedSubcategoryId
+                                    ? 'bg-black text-white border-black font-bold' 
+                                    : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black'
+                                }`}
+                            >
+                                Todas las subcategorías
+                            </button>
+                            {allCategories.find(c => c._id === selectedCategoryId).types.find(t => t._id === selectedTypeId).subcategories.map((sub) => (
+                                <button
+                                    key={sub._id}
+                                    onClick={() => setSelectedSubcategoryId(sub._id)}
+                                    className={`font-mono text-[10px] sm:text-xs uppercase px-4 py-1 border transition-all flex-shrink-0 ${
+                                        selectedSubcategoryId === sub._id
+                                        ? 'bg-black text-white border-black font-bold' 
+                                        : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black'
+                                    }`}
+                                >
+                                    {sub.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Panel de Filtros Expandible */}
             {showFilters && (
                 <div className="border-t-2 border-black bg-gray-50 p-4 sm:px-8 animate-fade-in flex flex-wrap gap-6 items-center">
+                    {/* Subcategorías dinámicas si hay categoría seleccionada */}
+                    {selectedCategoryId && allCategories.find(c => c._id === selectedCategoryId)?.subcategories?.length > 0 && (
+                        <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs uppercase font-bold text-gray-500">Sub:</span>
+                            <select 
+                                className="bg-white border-2 border-gray-200 p-2 font-mono text-xs uppercase outline-none focus:border-black"
+                                value={selectedSubcategoryId || ""}
+                                onChange={(e) => setSelectedSubcategoryId(e.target.value || null)}
+                            >
+                                <option value="">Todas</option>
+                                {allCategories.find(c => c._id === selectedCategoryId).subcategories.map(sub => (
+                                    <option key={sub._id} value={sub._id}>{sub.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Selección de Marca en Filtros Rápidos */}
+                    <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs uppercase font-bold text-gray-500">Marca:</span>
+                        <select 
+                            className="bg-white border-2 border-gray-200 p-2 font-mono text-xs uppercase outline-none focus:border-black"
+                            value={selectedBrand || ""}
+                            onChange={(e) => {
+                                const brand = e.target.value || null;
+                                setSelectedBrand(brand);
+                                if (brand) {
+                                    setSelectedCategoryId(null);
+                                    setSelectedTypeId(null);
+                                    setSelectedSubcategoryId(null);
+                                }
+                            }}
+                        >
+                            <option value="">Todas</option>
+                            {availableBrands.map(brand => (
+                                <option key={brand} value={brand}>{brand}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Ordenamiento */}
+                    <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs uppercase font-bold text-gray-500">Orden:</span>
+                        <select 
+                            className="bg-white border-2 border-gray-200 p-2 font-mono text-xs uppercase outline-none focus:border-black"
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                        >
+                            <option value="featured">Destacados</option>
+                            <option value="price_asc">Precio: Menor a Mayor</option>
+                            <option value="price_desc">Precio: Mayor a Menor</option>
+                            <option value="newest">Lo más nuevo</option>
+                        </select>
+                    </div>
+
                     <div className="flex items-center gap-2">
                         <span className="font-mono text-xs uppercase font-bold text-gray-500">Precio S/.</span>
                         <input 
@@ -606,9 +947,18 @@ export default function Storefront() {
                         <span className="font-mono text-sm uppercase font-bold">Solo en Stock</span>
                     </label>
 
-                    {(priceMin || priceMax || inStockOnly || searchQuery) && (
+                    {(priceMin || priceMax || inStockOnly || searchQuery || selectedCategoryId || sortBy !== 'featured') && (
                          <button 
-                            onClick={() => { setPriceMin(''); setPriceMax(''); setInStockOnly(false); setSearchQuery(''); }}
+                            onClick={() => { 
+                                setPriceMin(''); 
+                                setPriceMax(''); 
+                                setInStockOnly(false); 
+                                setSearchQuery(''); 
+                                setSelectedCategoryId(null);
+                                setSelectedSubcategoryId(null);
+                                setSelectedBrand(null);
+                                setSortBy('featured');
+                            }}
                             className="text-xs font-mono font-bold text-gray-500 underline hover:text-black ml-auto"
                          >
                              Limpiar Filtros
@@ -616,6 +966,7 @@ export default function Storefront() {
                     )}
                 </div>
             )}
+
         </div>
 
         {/* Búsqueda en Móviles (Opcional, pero cubierto por la barra) */}
@@ -624,10 +975,18 @@ export default function Storefront() {
             <input 
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (e.target.value && window.scrollY < window.innerHeight * 0.5) {
+                        document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }}
                 placeholder="Buscar por nombre o código..."
                 className="w-full bg-transparent border-none outline-none font-mono text-sm px-3"
             />
+            {searchQuery && (
+                <X className="w-5 h-5 text-gray-400 cursor-pointer hover:text-red-500" onClick={() => setSearchQuery('')} />
+            )}
         </div>
 
         <div className="p-4 sm:px-8">

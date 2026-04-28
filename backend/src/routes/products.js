@@ -6,16 +6,31 @@ const Product = require('../models/Product');
 router.get('/', async (req, res) => {
   try {
     await connectDB();
-    const { categoria, marca, search, page = 1, limit = 20 } = req.query;
+    const { category, type, subcategory, marca, search, sort, page = 1, limit = 20 } = req.query;
 
     const filter = {};
-    if (categoria) filter.categorias = categoria;
+    if (category) filter.category = category;
+    if (type) filter.type = type;
+    if (subcategory) filter.subcategory = subcategory;
     if (marca) filter.marca = new RegExp(marca, 'i');
     if (search) filter.$text = { $search: search };
 
+    const sortOption = {};
+    if (sort === 'price_asc') sortOption.precio = 1;
+    else if (sort === 'price_desc') sortOption.precio = -1;
+    else if (sort === 'newest') sortOption.createdAt = -1;
+    else sortOption.createdAt = 1;
+
     const skip = (Number(page) - 1) * Number(limit);
     const [products, total] = await Promise.all([
-      Product.find(filter).skip(skip).limit(Number(limit)).lean(),
+      Product.find(filter)
+        .populate('category')
+        .populate('type')
+        .populate('subcategory')
+        .sort(sortOption)
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
       Product.countDocuments(filter),
     ]);
 

@@ -23,6 +23,7 @@ apiRouter.use('/categories', require('./routes/categories'));
 apiRouter.use('/upload', require('./routes/upload'));
 apiRouter.use('/auth', require('./routes/auth'));
 apiRouter.use('/sales', require('./routes/sales'));
+apiRouter.use('/settings', require('./routes/settings'));
 
 // Montar el router en ambos posibles prefijos
 app.use('/api', apiRouter);

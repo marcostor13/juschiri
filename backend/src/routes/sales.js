@@ -16,7 +16,7 @@ router.post('/', async (req, res) => {
         codigo: i.codigo,
         nombre: i.nombre,
         precio: i.precio,
-        cantidad: 1
+        cantidad: i.cantidad || 1
       })),
       total,
       cliente,
@@ -66,6 +66,29 @@ router.get('/stats', auth, async (req, res) => {
       count: await Sale.countDocuments({ status: 'completed' }),
       daily: salesByDay
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/sales/:id - Protected (update status)
+router.put('/:id', auth, async (req, res) => {
+  try {
+    await connectDB();
+    const { status } = req.body;
+    const sale = await Sale.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    res.json(sale);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/sales/:id - Protected
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    await connectDB();
+    await Sale.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Sale deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

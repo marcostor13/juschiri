@@ -5,6 +5,7 @@ import {
   SlidersHorizontal, Loader2, ArrowLeft, ArrowRight, LayoutDashboard, 
   Package, ShoppingCart, LogOut, Menu, User as UserIcon, Settings
 } from 'lucide-react';
+import { ConfirmModal, Notification } from '../components/ui';
 
 // Components
 import Dashboard from './Dashboard';
@@ -12,17 +13,8 @@ import SalesList from './SalesList';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
-// --- UTILS ---
-const SUPER_SECTIONS = ['Todos', 'Zapatillas', 'Ropa', 'Accesorios', 'Cuidado', 'Otros'];
-const getSectionForProduct = (categorias) => {
-  if (!categorias || categorias.length === 0) return 'Otros';
-  const text = categorias.join(' ').toUpperCase();
-  if (/(LIMPIEZA|REPELENTE|ACONDICIONADOR|PAñOS)/.test(text)) return 'Cuidado';
-  if (/(HOODIE|SHIRT|PANTALON|JEANS|CASACA|CAMISA|SHORT|POLERA|SWEATER|SUETER|JACKET|CONJUNTO|BUZO|PANTS|BOXER|CAFARENA|TOP|JERSEY|MEDIAS|LONG SLEEVE)/.test(text)) return 'Ropa';
-  if (/(BILLETERA|WALLET|CARTERA|CORREA|GORRA|MOCHILA|MORRAL|PELUCHE|TAZAS|TOALLA|LENTES|GLASSES|MUñECO|TARJETERO|ENCENDEDOR)/.test(text)) return 'Accesorios';
-  if (/(JORDAN|YEEZY|AF1|AIR FORCE|DUNK|AIR MAX|350|700|BAPE|TRAINER|SLIDE|OODSY|CLASSIC|CAMPUS|GAZELLE|SHOX|RESPONSE|CONVERSE|VANS|VULC|SNEAKER|LOW|HIGH|MID|BOOT|PORTOFINO|SANDALIA|SKEL)/.test(text)) return 'Zapatillas';
-  return 'Otros';
-};
+// Componentes y Utilidades cargados
+
 
 // --- PRODUCT CARD COMPONENT (INTERNAL) ---
 const ProductRow = React.memo(({ p, onEdit, onDelete }) => (
@@ -58,6 +50,44 @@ export default function Backoffice() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inventory');
   const [user, setUser] = useState(null);
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
+  const [itemToDelete, setItemToDelete] = useState(null);
+
+  const showNotification = useCallback((message, type = 'info') => {
+      setNotification({ show: true, message, type });
+      setTimeout(() => setNotification({ show: false, message: '', type: 'info' }), 3000);
+  }, []);
+
+  const [settings, setSettings] = useState({ whatsapp_number: '' });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_URL}/settings`);
+        const data = await res.json();
+        setSettings(prev => ({ ...prev, ...data }));
+      } catch (err) { console.error(err); }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSaveSetting = async (key, value) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/settings`, {
+        method: 'PUT',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ key, value })
+      });
+      if (res.ok) {
+        showNotification('Configuración guardada', 'success');
+        setSettings(prev => ({ ...prev, [key]: value }));
+      }
+    } catch (err) { showNotification('Error al guardar', 'error'); }
+  };
   
   // Auth Check
   useEffect(() => {
@@ -87,16 +117,18 @@ export default function Backoffice() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
 
+  const [allCategories, setAllCategories] = useState([]);
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/products?limit=2500`);
-      const data = await res.json();
-      const mapped = (data.products || []).map(p => ({
-        ...p,
-        superSection: getSectionForProduct(p.categorias)
-      }));
-      setProducts(mapped);
+      const [prodRes, catRes] = await Promise.all([
+        fetch(`${API_URL}/products?limit=2500`),
+        fetch(`${API_URL}/categories`)
+      ]);
+      const data = await prodRes.json();
+      const catData = await catRes.json();
+      setProducts(data.products || []);
+      setAllCategories(catData || []);
     } catch (e) {
       console.error(e);
     }
@@ -109,10 +141,10 @@ export default function Backoffice() {
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      if (activeSection !== 'Todos' && p.superSection !== activeSection) return false;
+      if (activeSection !== 'Todos' && p.category?._id !== activeSection) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        return `${p.nombre} ${p.marca} ${p.codigo}`.toLowerCase().includes(q);
+        return `${p.nombre || ''} ${p.marca || ''} ${p.codigo || ''}`.toLowerCase().includes(q);
       }
       return true;
     });
@@ -128,7 +160,9 @@ export default function Backoffice() {
   const openModal = (product = null) => {
     setCurrentProduct(product || {
       codigo: '', nombre: '', marca: '', precio: 0, 
-      stock_actual: 0, stock_anterior: 0, imagen_url: '', categorias: []
+      stock_actual: 0, stock_anterior: 0, imagen_url: '', 
+      galeria: [], variantes: [],
+      category: '', type: '', subcategory: ''
     });
     setIsModalOpen(true);
   };
@@ -148,6 +182,11 @@ export default function Backoffice() {
     try {
       const token = localStorage.getItem('token');
       const method = initialProductRef.current ? 'PUT' : 'POST';
+      const payload = { ...currentProduct };
+      if (typeof payload.category === 'object' && payload.category?._id) payload.category = payload.category._id;
+      if (typeof payload.type === 'object' && payload.type?._id) payload.type = payload.type._id;
+      if (typeof payload.subcategory === 'object' && payload.subcategory?._id) payload.subcategory = payload.subcategory._id;
+      
       const url = initialProductRef.current 
         ? `${API_URL}/products/${initialProductRef.current}` 
         : `${API_URL}/products`;
@@ -158,18 +197,19 @@ export default function Backoffice() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(currentProduct)
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
         await fetchProducts();
         setIsModalOpen(false);
+        showNotification(initialProductRef.current ? 'Producto actualizado' : 'Producto creado', 'success');
       } else {
         const err = await res.json();
-        alert(`Error: ${err.error}`);
+        showNotification(`Error: ${err.error}`, 'error');
       }
     } catch (e) {
-      alert("Error al guardar");
+      showNotification("Error al guardar", 'error');
     }
     setFormLoading(false);
   };
@@ -183,24 +223,89 @@ export default function Backoffice() {
       const { uploadUrl, publicUrl } = await res.json();
       await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
       setCurrentProduct({ ...currentProduct, imagen_url: publicUrl });
+      showNotification('Imagen subida', 'success');
     } catch (err) {
-      alert("Error al subir imagen");
+      showNotification("Error al subir imagen", 'error');
     }
     setFormLoading(false);
   };
 
-  const handleDelete = async (codigo) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el producto ${codigo}?`)) return;
+  const handleGalleryUpload = async (e) => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+      setFormLoading(true);
+      try {
+          const newImages = [];
+          for(const file of files) {
+              const res = await fetch(`${API_URL}/upload/presigned?fileName=${file.name}&fileType=${file.type}`);
+              const { uploadUrl, publicUrl } = await res.json();
+              await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+              newImages.push(publicUrl);
+          }
+          setCurrentProduct(prev => ({
+              ...prev, 
+              galeria: [...(prev.galeria || []), ...newImages]
+          }));
+          showNotification(`${files.length} imágenes subidas a la galería`, 'success');
+      } catch(err) {
+          showNotification('Error al subir imágenes', 'error');
+      }
+      setFormLoading(false);
+  };
+
+  const removeGalleryImage = (index) => {
+      setCurrentProduct(prev => {
+          const newGaleria = [...prev.galeria];
+          newGaleria.splice(index, 1);
+          return { ...prev, galeria: newGaleria };
+      });
+  };
+
+  const addVariant = () => {
+      setCurrentProduct(prev => ({
+          ...prev,
+          variantes: [...(prev.variantes || []), { talla: '', color: '', stock: 0 }]
+      }));
+  };
+
+  const updateVariant = (index, field, value) => {
+      setCurrentProduct(prev => {
+          const newVar = [...prev.variantes];
+          newVar[index][field] = value;
+          return { ...prev, variantes: newVar };
+      });
+  };
+
+  const removeVariant = (index) => {
+      setCurrentProduct(prev => {
+          const newVar = [...prev.variantes];
+          newVar.splice(index, 1);
+          return { ...prev, variantes: newVar };
+      });
+  };
+
+  const executeDelete = async () => {
+    if (!itemToDelete) return;
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/products/${codigo}`, { 
+      const res = await fetch(`${API_URL}/products/${itemToDelete}`, { 
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) setProducts(products.filter(p => p.codigo !== codigo));
+      if (res.ok) {
+          setProducts(products.filter(p => p.codigo !== itemToDelete));
+          showNotification('Producto eliminado', 'success');
+      } else {
+          showNotification('Error al eliminar producto', 'error');
+      }
     } catch (e) {
-      console.error(e);
+      showNotification('Error de conexión', 'error');
     }
+    setItemToDelete(null);
+  };
+
+  const handleDelete = (codigo) => {
+    setItemToDelete(codigo);
   };
 
   const SidebarItem = ({ id, label, icon: Icon }) => (
@@ -230,9 +335,7 @@ export default function Backoffice() {
                 <SidebarItem id="sales" label="Ventas" icon={ShoppingCart} />
                 <div className="pt-10">
                     <p className="px-8 font-mono text-[9px] text-gray-600 uppercase mb-4">Administración</p>
-                    <button className="w-full flex items-center gap-4 px-6 py-4 text-gray-400 font-bold uppercase text-xs hover:text-white transition-colors">
-                        <Settings size={18} /> Configuración
-                    </button>
+                    <SidebarItem id="settings" label="Configuración" icon={Settings} />
                 </div>
             </nav>
 
@@ -281,6 +384,33 @@ export default function Backoffice() {
             
             {activeTab === 'sales' && <SalesList />}
 
+            {activeTab === 'settings' && (
+                <div className="bg-white border-2 border-black p-8 max-w-xl animate-fade-in">
+                    <h3 className="text-xl font-black uppercase italic mb-6 border-b-2 border-black pb-4">Ajustes del Sistema</h3>
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block font-mono text-[10px] uppercase text-gray-500 mb-2">Número de WhatsApp (Compras)</label>
+                            <div className="flex gap-4">
+                                <input 
+                                    type="text" 
+                                    className="flex-1 p-3 border-2 border-gray-200 focus:border-black outline-none font-mono text-sm"
+                                    placeholder="Ej: 51921385472"
+                                    value={settings.whatsapp_number || ''}
+                                    onChange={e => setSettings({ ...settings, whatsapp_number: e.target.value })}
+                                />
+                                <button 
+                                    onClick={() => handleSaveSetting('whatsapp_number', settings.whatsapp_number)}
+                                    className="bg-black text-white px-6 font-black uppercase text-xs hover:bg-neon-green hover:text-black transition-colors border-2 border-black"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                            <p className="mt-2 font-mono text-[9px] text-gray-400">Incluye código de país sin el signo + (ej. 51 para Perú).</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {activeTab === 'inventory' && (
                 <div className="space-y-8 animate-fade-in">
                     {/* Filters */}
@@ -295,13 +425,19 @@ export default function Backoffice() {
                             />
                         </div>
                         <div className="flex gap-2 overflow-x-auto no-scrollbar w-full pb-2 lg:pb-0">
-                            {SUPER_SECTIONS.map(sec => (
+                            <button 
+                                onClick={() => { setActiveSection('Todos'); setCurrentPage(1); }}
+                                className={`font-mono text-[10px] uppercase font-bold px-4 py-2 border-2 transition-all flex-shrink-0 ${activeSection === 'Todos' ? 'bg-black text-neon-green border-black' : 'bg-white text-gray-400 border-gray-100 hover:border-black hover:text-black'}`}
+                            >
+                                Todos
+                            </button>
+                            {allCategories.map(cat => (
                                 <button 
-                                    key={sec}
-                                    onClick={() => { setActiveSection(sec); setCurrentPage(1); }}
-                                    className={`font-mono text-[10px] uppercase font-bold px-4 py-2 border-2 transition-all flex-shrink-0 ${activeSection === sec ? 'bg-black text-neon-green border-black' : 'bg-white text-gray-400 border-gray-100 hover:border-black hover:text-black'}`}
+                                    key={cat._id}
+                                    onClick={() => { setActiveSection(cat._id); setCurrentPage(1); }}
+                                    className={`font-mono text-[10px] uppercase font-bold px-4 py-2 border-2 transition-all flex-shrink-0 ${activeSection === cat._id ? 'bg-black text-neon-green border-black' : 'bg-white text-gray-400 border-gray-100 hover:border-black hover:text-black'}`}
                                 >
-                                    {sec}
+                                    {cat.name}
                                 </button>
                             ))}
                         </div>
@@ -357,8 +493,8 @@ export default function Backoffice() {
                     <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-4">
-                                <label className="block font-mono text-[10px] font-bold uppercase text-gray-500">Imagen del Producto</label>
-                                <div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center relative overflow-hidden group">
+                                <label className="block font-mono text-[10px] font-bold uppercase text-gray-500">Imagen Principal</label>
+                                <div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center relative overflow-hidden group mb-4">
                                     {currentProduct.imagen_url ? (
                                         <img src={currentProduct.imagen_url} className="w-full h-full object-contain mix-blend-multiply p-4" alt="" />
                                     ) : (
@@ -366,11 +502,29 @@ export default function Backoffice() {
                                     )}
                                     <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer flex flex-col items-center justify-center text-white font-bold text-xs uppercase text-center p-4">
                                         <RefreshCw size={24} className="mb-2" />
-                                        Subir / Cambiar
+                                        Subir / Cambiar Principal
                                         <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={formLoading} />
                                     </label>
                                 </div>
+
+                                {/* Galería */}
+                                <label className="block font-mono text-[10px] font-bold uppercase text-gray-500 mb-2">Galería de Imágenes</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {(currentProduct.galeria || []).map((img, i) => (
+                                        <div key={i} className="aspect-square border border-gray-200 relative group bg-gray-50">
+                                            <img src={img} className="w-full h-full object-cover mix-blend-multiply" alt=""/>
+                                            <button type="button" onClick={() => removeGalleryImage(i)} className="absolute top-1 right-1 bg-red-500 text-white p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <X size={12}/>
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <label className="aspect-square border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                                        <Plus className="text-gray-400" />
+                                        <input type="file" multiple className="hidden" accept="image/*" onChange={handleGalleryUpload} disabled={formLoading} />
+                                    </label>
+                                </div>
                             </div>
+
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-2 sm:col-span-1">
@@ -379,7 +533,7 @@ export default function Backoffice() {
                                     </div>
                                     <div className="col-span-2 sm:col-span-1">
                                         <label className="block font-mono text-[10px] font-bold uppercase mb-1">Marca</label>
-                                        <input required className="w-full p-3 border-2 border-black font-mono text-sm uppercase" value={currentProduct.marca} onChange={e => setCurrentProduct({...currentProduct, marca: e.target.value.toUpperCase()})} />
+                                        <input className="w-full p-3 border-2 border-black font-mono text-sm uppercase" value={currentProduct.marca || ''} onChange={e => setCurrentProduct({...currentProduct, marca: e.target.value.toUpperCase()})} />
                                     </div>
                                 </div>
                                 <div className="col-span-2">
@@ -392,13 +546,79 @@ export default function Backoffice() {
                                         <input type="number" required className="w-full p-3 border-2 border-black font-mono text-sm" value={currentProduct.precio} onChange={e => setCurrentProduct({...currentProduct, precio: Number(e.target.value)})} />
                                     </div>
                                     <div>
-                                        <label className="block font-mono text-[10px] font-bold uppercase mb-1">Stock Actual</label>
-                                        <input type="number" required className="w-full p-3 border-2 border-black font-mono text-sm" value={currentProduct.stock_actual} onChange={e => setCurrentProduct({...currentProduct, stock_actual: Number(e.target.value)})} />
+                                        <label className="block font-mono text-[10px] font-bold uppercase mb-1">Stock Global</label>
+                                        <input type="number" required className="w-full p-3 border-2 border-black font-mono text-sm disabled:opacity-50" value={currentProduct.stock_actual} disabled={(currentProduct.variantes && currentProduct.variantes.length > 0)} onChange={e => setCurrentProduct({...currentProduct, stock_actual: Number(e.target.value)})} />
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block font-mono text-[10px] font-bold uppercase mb-1">Categorías</label>
-                                    <input placeholder="SEPARADAS POR COMAS" className="w-full p-3 border-2 border-black font-mono text-sm uppercase" value={currentProduct.categorias.join(', ')} onChange={e => setCurrentProduct({...currentProduct, categorias: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})} />
+
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label className="block font-mono text-[10px] font-bold uppercase mb-1">Categoría</label>
+                                        <select 
+                                            className="w-full p-3 border-2 border-black font-mono text-xs uppercase"
+                                            value={typeof currentProduct.category === 'object' ? currentProduct.category?._id : currentProduct.category || ""}
+                                            onChange={e => setCurrentProduct({...currentProduct, category: e.target.value, type: '', subcategory: ''})}
+                                        >
+                                            <option value="">SELECC...</option>
+                                            {allCategories.map(c => (
+                                                <option key={c._id} value={c._id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block font-mono text-[10px] font-bold uppercase mb-1">Tipo</label>
+                                        <select 
+                                            className="w-full p-3 border-2 border-black font-mono text-xs uppercase"
+                                            value={typeof currentProduct.type === 'object' ? currentProduct.type?._id : currentProduct.type || ""}
+                                            onChange={e => setCurrentProduct({...currentProduct, type: e.target.value, subcategory: ''})}
+                                            disabled={!currentProduct.category}
+                                        >
+                                            <option value="">SELECC...</option>
+                                            {(allCategories.find(c => c._id === (typeof currentProduct.category === 'object' ? currentProduct.category._id : currentProduct.category))?.types || []).map(t => (
+                                                <option key={t._id} value={t._id}>{t.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block font-mono text-[10px] font-bold uppercase mb-1">Subcat</label>
+                                        <select 
+                                            className="w-full p-3 border-2 border-black font-mono text-xs uppercase"
+                                            value={typeof currentProduct.subcategory === 'object' ? currentProduct.subcategory?._id : currentProduct.subcategory || ""}
+                                            onChange={e => setCurrentProduct({...currentProduct, subcategory: e.target.value})}
+                                            disabled={!currentProduct.type}
+                                        >
+                                            <option value="">SELECC...</option>
+                                            {(allCategories.find(c => c._id === (typeof currentProduct.category === 'object' ? currentProduct.category._id : currentProduct.category))
+                                              ?.types?.find(t => t._id === (typeof currentProduct.type === 'object' ? currentProduct.type._id : currentProduct.type))
+                                              ?.subcategories || []).map(sub => (
+                                                <option key={sub._id} value={sub._id}>{sub.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* VARIANTES */}
+                                <div className="mt-6 border-t-2 border-black pt-4">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-black uppercase text-sm tracking-tighter">Variantes (Tallas/Colores)</h3>
+                                        <button type="button" onClick={addVariant} className="flex items-center gap-1 font-mono text-[10px] font-bold uppercase px-3 py-1 bg-black text-white hover:bg-neon-green hover:text-black transition-colors">
+                                            <Plus size={12} /> Añadir Variante
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                        {(currentProduct.variantes || []).length === 0 && (
+                                            <p className="text-xs font-mono text-gray-500 italic">No hay variantes. Se usará el Stock Global.</p>
+                                        )}
+                                        {(currentProduct.variantes || []).map((v, i) => (
+                                            <div key={i} className="flex gap-2 items-center bg-gray-50 p-2 border border-gray-200">
+                                                <input type="text" placeholder="Talla (ej: M)" className="w-1/3 p-2 font-mono text-xs uppercase border border-gray-300" value={v.talla || ''} onChange={e => updateVariant(i, 'talla', e.target.value)} />
+                                                <input type="text" placeholder="Color (ej: Rojo)" className="w-1/3 p-2 font-mono text-xs uppercase border border-gray-300" value={v.color || ''} onChange={e => updateVariant(i, 'color', e.target.value)} />
+                                                <input type="number" placeholder="Stock" className="w-1/4 p-2 font-mono text-xs border border-gray-300" value={v.stock} onChange={e => updateVariant(i, 'stock', Number(e.target.value))} />
+                                                <button type="button" onClick={() => removeVariant(i)} className="p-2 text-red-500 hover:bg-red-100 transition-colors"><Trash2 size={14}/></button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -412,6 +632,23 @@ export default function Backoffice() {
                     </div>
                 </div>
             </div>
+        )}
+
+        <ConfirmModal 
+            isOpen={itemToDelete !== null}
+            title="Eliminar Producto"
+            message={`¿Estás seguro de eliminar el producto ${itemToDelete}? Esta acción es irreversible.`}
+            confirmText="Sí, Eliminar"
+            onConfirm={executeDelete}
+            onCancel={() => setItemToDelete(null)}
+        />
+        
+        {notification.show && (
+            <Notification 
+                type={notification.type} 
+                message={notification.message} 
+                onClose={() => setNotification({ ...notification, show: false })} 
+            />
         )}
     </div>
   );
