@@ -6,8 +6,12 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
       colors: {
-        'neon-green': '#CCFF00',
+        'accent-green': '#1f2937', // Dark gray/black accent instead of neon
+        'neon-green': '#ffffff', // Nullify neon-green by making it white to not break existing classes temporarily
       },
       animation: {
         'marquee': 'marquee 20s linear infinite',

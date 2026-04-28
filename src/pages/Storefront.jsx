@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, X, Menu, Search, Instagram, ArrowRight, Check, CreditCard, Truck, MapPin, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { ShoppingBag, X, Menu, Search, Instagram, ArrowRight, Check, CreditCard, Truck, MapPin, SlidersHorizontal, Trash2, ShoppingCart, Loader2 } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { Notification, ConfirmModal } from '../components/ui';
 
@@ -14,8 +14,8 @@ const formatPrice = (price) => `S/. ${(price || 0).toLocaleString('es-PE')}`;
 // --- COMPONENTS ---
 
 const Marquee = () => (
-  <div className="bg-neon-green text-black overflow-hidden py-2 border-b-2 border-black whitespace-nowrap sticky top-0 z-[60]">
-    <div className="animate-marquee inline-block font-mono font-bold text-sm tracking-tighter uppercase">
+  <div className="bg-gray-100 text-gray-500 overflow-hidden py-2 border-b border-gray-200 whitespace-nowrap sticky top-0 z-[60]">
+    <div className="animate-marquee inline-block text-xs font-medium tracking-widest uppercase">
       &nbsp;• ENVÍOS GRATIS +S/.500 • SOLO ORIGINALES • NUEVOS DROPS CADA VIERNES • JUS CHIRI EXCLUSIVE • ENVÍOS GRATIS +S/.500 • SOLO ORIGINALES •
     </div>
   </div>
@@ -43,7 +43,6 @@ const Navbar = ({ cartCount, onOpenCart, searchQuery, setSearchQuery, onOpenMenu
   const handleSearchChange = (e) => {
       setSearchQuery(e.target.value);
       if (e.target.value) {
-          // Si escribe, asegurar scroll a la tienda si está muy arriba
           if (window.scrollY < window.innerHeight * 0.5) {
               document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
           }
@@ -51,45 +50,47 @@ const Navbar = ({ cartCount, onOpenCart, searchQuery, setSearchQuery, onOpenMenu
   };
 
   return (
-    <nav className="sticky top-9 z-50 bg-white border-b-2 border-black">
+    <nav className="sticky top-8 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20 relative">
           <div className="flex items-center gap-6 w-1/3">
-            <Menu className="w-8 h-8 cursor-pointer hover:opacity-50 transition-opacity" onClick={onOpenMenu} />
-            <div className={`hidden sm:flex items-center transition-all overflow-hidden ${showSearch ? 'w-64 border-b-2 border-black' : 'w-6'}`}>
+            <Menu className="w-6 h-6 cursor-pointer text-gray-800 hover:text-black transition-colors" strokeWidth={1.5} onClick={onOpenMenu} />
+            <div className={`hidden sm:flex items-center transition-all overflow-hidden ${showSearch ? 'w-64 border-b border-gray-300' : 'w-6'}`}>
                 <Search 
-                    className={`w-6 h-6 cursor-pointer hover:opacity-50 flex-shrink-0 ${showSearch ? 'text-neon-green fill-black' : ''}`} 
+                    className={`w-5 h-5 cursor-pointer text-gray-600 hover:text-black flex-shrink-0`} 
+                    strokeWidth={1.5}
                     onClick={handleToggleSearch}
                 />
                 <input 
                     type="text"
                     value={searchQuery}
                     onChange={handleSearchChange}
-                    placeholder="Buscar producto, marca..."
-                    className={`ml-2 outline-none font-mono text-sm w-full bg-transparent transition-opacity duration-300 ${showSearch ? 'opacity-100' : 'opacity-0'}`}
+                    placeholder="Buscar marca o producto..."
+                    className={`ml-2 outline-none text-sm w-full bg-transparent transition-opacity duration-300 font-medium ${showSearch ? 'opacity-100' : 'opacity-0'}`}
                 />
                 {showSearch && searchQuery && (
-                    <X className="w-4 h-4 cursor-pointer hover:text-red-500" onClick={() => setSearchQuery('')} />
+                    <X className="w-4 h-4 cursor-pointer text-gray-400 hover:text-red-500" onClick={() => setSearchQuery('')} />
                 )}
             </div>
           </div>
 
-          <div className="w-1/3 text-center flex justify-center">
-              <h1 className="font-black text-3xl tracking-tighter uppercase italic cursor-pointer">JUS CHIRI®</h1>
+          <div className="w-1/3 flex justify-center">
+              <img src="/logo juschiri.jpeg" alt="JUS CHIRI" className="h-10 sm:h-12 object-contain mix-blend-multiply cursor-pointer" onClick={() => window.scrollTo(0,0)} />
           </div>
 
           <div className="flex items-center justify-end w-1/3 gap-6">
             <button 
               onClick={onOpenCart}
-              className={`relative p-2 transition-all duration-300 border-2 rounded-none group ${
-                  isBumping 
-                  ? 'bg-neon-green text-black border-black scale-110 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-10' 
-                  : 'hover:bg-black hover:text-white border-transparent hover:border-black'
-              }`}
+              className={`relative flex items-center gap-2 transition-all duration-300 group hover:opacity-70 ${isBumping ? 'scale-110' : ''}`}
             >
-              <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-sm hidden sm:block">CART [{cartCount}]</span>
-                  <ShoppingBag className={`w-6 h-6 transition-transform ${isBumping ? '-rotate-12 scale-110' : ''}`} />
+              <span className="font-semibold text-sm hidden sm:block tracking-wide">CART</span>
+              <div className="relative">
+                  <ShoppingBag strokeWidth={1.5} className={`w-6 h-6`} />
+                  {cartCount > 0 && (
+                      <span className="absolute -top-1 -right-2 bg-black text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                          {cartCount}
+                      </span>
+                  )}
               </div>
             </button>
           </div>
@@ -99,37 +100,135 @@ const Navbar = ({ cartCount, onOpenCart, searchQuery, setSearchQuery, onOpenMenu
   );
 };
 
-const Hero = () => (
-  <div className="relative border-b-2 border-black overflow-hidden group">
-    <div className="grid grid-cols-1 lg:grid-cols-2 h-[80vh]">
-      <div className="relative flex flex-col justify-center px-8 lg:px-16 bg-white border-b-2 lg:border-b-0 lg:border-r-2 border-black z-10">
-        <span className="font-mono text-xs mb-4 inline-block bg-black text-white px-2 py-1 w-max rotate-1">
-            FW24 COLLECTION / DROP 01
-        </span>
-        <h1 className="text-6xl sm:text-8xl font-black leading-[0.85] tracking-tighter uppercase mb-6 mix-blend-multiply">
-          Street<br/>Wear<br/>Cult.
-        </h1>
-        <p className="font-mono text-sm max-w-md mb-8 leading-relaxed border-l-4 border-neon-green pl-4">
-          La curaduría más estricta de Lima. Piezas de archivo y los últimos lanzamientos de hype mundial. No apto para tímidos.
-        </p>
-        <a href="#shop" className="w-full sm:w-auto bg-black text-white font-bold text-lg px-8 py-4 uppercase tracking-wider hover:bg-neon-green hover:text-black transition-colors border-2 border-black text-center">
-          Explorar Drop
-        </a>
-      </div>
-      <div className="relative h-full overflow-hidden bg-gray-100">
-         <img
-          className="absolute inset-0 w-full h-full object-cover grayscale contrast-125 group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
-          src="https://images.unsplash.com/photo-1552346154-21d32810aba3?q=80&w=2070&auto=format&fit=crop"
-          alt="Sneakers"
-        />
-      </div>
-    </div>
-  </div>
-);
+const HeroSlider = ({ customSlides }) => {
+    const defaultSlides = [
+        {
+            title: "The Grail Collection",
+            subtitle: "EXCLUSIVAS Y LIMITADAS",
+            desc: "Piezas de archivo y los lanzamientos más esperados a nivel mundial.",
+            img: "https://images.unsplash.com/photo-1552346154-21d32810aba3?q=80&w=2070&auto=format&fit=crop",
+            color: "bg-[#0f4c3a]", // StockX-esque elegant dark green
+            textColor: "text-white",
+            buttonColor: "bg-white text-[#0f4c3a] hover:bg-gray-100"
+        },
+        {
+            title: "Nuevas Siluetas",
+            subtitle: "DROP DE TEMPORADA",
+            desc: "Descubre la curaduría más estricta de este mes.",
+            img: "https://images.unsplash.com/photo-1608231387042-66d1773070a5?q=80&w=2074&auto=format&fit=crop",
+            color: "bg-[#F9EBEA]", // Blush pink / soft coral
+            textColor: "text-gray-900",
+            buttonColor: "bg-gray-900 text-white hover:bg-black"
+        },
+        {
+            title: "Streetwear Premium",
+            subtitle: "HYPE APPAREL",
+            desc: "Eleva tu rotación con las marcas más codiciadas de la escena.",
+            img: "https://images.unsplash.com/photo-1515347619362-e6fdff686524?q=80&w=2069&auto=format&fit=crop",
+            color: "bg-zinc-900",
+            textColor: "text-white",
+            buttonColor: "bg-white text-zinc-900 hover:bg-gray-200"
+        }
+    ];
+
+    const slides = customSlides && customSlides.length > 0 ? customSlides : defaultSlides;
+
+    const [current, setCurrent] = useState(0);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrent((prev) => (prev + 1) % slides.length);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, [slides.length]);
+
+    return (
+        <div className="relative overflow-hidden group bg-gray-50 border-b border-gray-200 h-[70vh]">
+            {slides.map((slide, idx) => (
+                <div 
+                    key={idx}
+                    className={`absolute inset-0 grid grid-cols-1 lg:grid-cols-2 transition-opacity duration-1000 ease-in-out ${idx === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                >
+                    <div className={`relative flex flex-col justify-center px-8 lg:px-24 ${slide.color} ${slide.textColor} z-10 transition-colors duration-1000`}>
+                        <span className="text-xs font-semibold tracking-widest opacity-80 mb-4 uppercase">
+                            {slide.subtitle}
+                        </span>
+                        <h1 className="text-5xl sm:text-7xl font-bold leading-tight tracking-tight mb-6">
+                            {slide.title}
+                        </h1>
+                        <p className="opacity-90 mb-8 max-w-md text-lg">
+                            {slide.desc}
+                        </p>
+                        <a href="#shop" className={`w-full sm:w-max font-medium text-sm px-10 py-4 uppercase tracking-wider transition-colors text-center rounded-md ${slide.buttonColor}`}>
+                            Explorar Catálogo
+                        </a>
+                    </div>
+                    <div className="relative h-full overflow-hidden hidden lg:block">
+                        <div className="absolute inset-0 bg-black/10 z-10"></div>
+                        <img
+                            className={`absolute inset-0 w-full h-full object-cover transition-transform duration-[10000ms] ease-out ${idx === current ? 'scale-110' : 'scale-100'}`}
+                            src={slide.img}
+                            alt={slide.title}
+                        />
+                    </div>
+                </div>
+            ))}
+            
+            {/* Slider Controls */}
+            <div className="absolute bottom-8 left-8 lg:left-24 z-20 flex gap-3">
+                {slides.map((_, idx) => (
+                    <button 
+                        key={idx} 
+                        onClick={() => setCurrent(idx)}
+                        className={`h-1.5 rounded-full transition-all duration-500 ${idx === current ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}`}
+                        title={`Ir a diapositiva ${idx + 1}`}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const TrendingGallery = ({ customGallery }) => {
+    const defaultItems = [
+        { brand: "Jordan", name: "Air Jordan 1 Retro High", img: "https://images.unsplash.com/photo-1597045566677-8cf032ed6634?q=80&w=1974&auto=format&fit=crop", color: "bg-gray-100" },
+        { brand: "Yeezy", name: "Boost 350 V2", img: "https://images.unsplash.com/photo-1615290642882-6b9501729a27?q=80&w=1974&auto=format&fit=crop", color: "bg-[#F4F4F4]" },
+        { brand: "Nike", name: "Dunk Low Retro", img: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=1925&auto=format&fit=crop", color: "bg-[#F0F4F8]" },
+        { brand: "New Balance", name: "550 White Grey", img: "https://images.unsplash.com/photo-1664478546384-d57ffe74a7f4?q=80&w=2070&auto=format&fit=crop", color: "bg-[#FAFAFA]" },
+        { brand: "Supreme", name: "Box Logo Hoodie", img: "https://images.unsplash.com/photo-1515347619362-e6fdff686524?q=80&w=2069&auto=format&fit=crop", color: "bg-[#FEF2F2]" }
+    ];
+
+    return (
+        <div className="py-16 bg-white border-b border-gray-100 overflow-hidden">
+            <div className="max-w-[1920px] mx-auto px-4 sm:px-8 mb-8 flex justify-between items-end">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-gray-900">Populares Ahora</h2>
+                    <p className="text-sm text-gray-500 mt-1">Lo más buscado de la semana</p>
+                </div>
+                <a href="#shop" className="text-sm font-medium text-emerald-700 hover:text-emerald-800 transition-colors hidden sm:block">
+                    Ver catálogo completo →
+                </a>
+            </div>
+            
+            <div className="relative w-full flex gap-4 overflow-x-auto no-scrollbar px-4 sm:px-8 pb-4 snap-x">
+                {(customGallery && customGallery.length > 0 ? customGallery : defaultItems).map((item, i) => (
+                    <div key={i} className="min-w-[280px] sm:min-w-[320px] group cursor-pointer snap-start">
+                        <div className={`aspect-[4/5] ${item.color} rounded-xl overflow-hidden mb-4 relative`}>
+                            <img src={item.img} alt={item.name} className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-700" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300"></div>
+                        </div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{item.brand}</p>
+                        <p className="text-sm font-medium text-gray-900 truncate group-hover:underline decoration-1">{item.name}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 const ProductCard = React.memo(({ product, onAddToCart }) => {
   const navigate = useNavigate();
-  const [isAdded, setIsAdded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const hasVariants = product.variantes && product.variantes.length > 0;
 
   const handleAdd = (e) => {
@@ -141,22 +240,24 @@ const ProductCard = React.memo(({ product, onAddToCart }) => {
       }
       const finalPrice = product.descuento > 0 ? product.precio * (1 - product.descuento / 100) : product.precio;
       onAddToCart({ ...product, precio: finalPrice, precio_original: product.precio });
-      setIsAdded(true);
-      setTimeout(() => setIsAdded(false), 1000);
   };
 
   return (
-  <div className="group relative bg-white border-2 border-transparent hover:border-black transition-all duration-300 flex flex-col h-full animate-fade-in-up">
-    <Link to={`/producto/${product.codigo}`} className="relative aspect-[4/5] bg-gray-50 overflow-hidden border-b-2 border-gray-100 group-hover:border-black transition-colors flex items-center justify-center p-4 block">
+  <div 
+    className="group relative bg-white transition-all duration-300 flex flex-col h-full animate-fade-in-up"
+    onMouseEnter={() => setIsHovered(true)}
+    onMouseLeave={() => setIsHovered(false)}
+  >
+    <Link to={`/producto/${product.codigo}`} className="relative aspect-[4/5] bg-[#f8f9fa] overflow-hidden flex items-center justify-center p-6 block rounded-lg m-2 mb-0">
       {product.stock_actual <= 0 && (
-        <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-3 py-1 uppercase border-l-2 border-b-2 border-black z-10">
+        <span className="absolute top-4 right-4 bg-gray-100 text-gray-500 text-xs font-semibold px-2 py-1 rounded-sm z-10">
           Agotado
         </span>
       )}
       {product.descuento > 0 && (
-        <div className="absolute top-3 left-3 z-10">
-            <span className="bg-red-600 text-white text-xs font-black px-3 py-1.5 uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black transform -rotate-2 inline-block hover:rotate-0 transition-transform">
-                -{product.descuento}% OFF
+        <div className="absolute top-4 left-4 z-10">
+            <span className="bg-red-50 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">
+                -{product.descuento}%
             </span>
         </div>
       )}
@@ -164,48 +265,42 @@ const ProductCard = React.memo(({ product, onAddToCart }) => {
         src={product.imagen_url || 'https://via.placeholder.com/400?text=No+Image'}
         alt={product.nombre}
         loading="lazy"
-        className="h-full w-full object-contain group-hover:scale-110 transition-transform duration-700 ease-in-out mix-blend-multiply"
+        className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out mix-blend-multiply"
       />
-      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px] transition-all duration-300 ${isAdded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-        {product.stock_actual > 0 ? (
-          <button
-            onClick={handleAdd}
-            className={`font-bold uppercase text-sm px-6 py-3 border-2 border-black transform transition-all duration-300 shadow-xl ${
-                isAdded 
-                ? 'bg-neon-green text-black translate-y-0 scale-105 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]' 
-                : 'bg-white text-black hover:bg-neon-green translate-y-4 group-hover:translate-y-0'
-            }`}
-          >
-            {isAdded ? 'Agregado ✓' : 'Agregar al Carrito'}
-          </button>
-        ) : (
-          <button className="bg-gray-200 text-gray-500 font-bold uppercase text-sm px-6 py-3 border-2 border-black cursor-not-allowed">
-            Sin Stock
-          </button>
-        )}
-      </div>
     </Link>
     <div className="p-4 flex-1 flex flex-col justify-between">
       <div>
-        <div className="flex justify-between items-start mb-2">
-            <p className="font-mono text-xs text-gray-500 uppercase">{product.codigo}</p>
-            <p className="font-bold text-sm uppercase tracking-wide">{product.marca}</p>
+        <div className="flex justify-between items-start mb-1">
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{product.marca || 'GENÉRICO'}</p>
         </div>
-        <Link to={`/producto/${product.codigo}`} className="text-sm sm:text-base font-black uppercase leading-tight mb-2 hover:underline decoration-2 line-clamp-2 block">
+        <Link to={`/producto/${product.codigo}`} className="text-sm font-medium leading-snug mb-2 text-gray-900 group-hover:underline decoration-1 line-clamp-2 block">
             {product.nombre}
         </Link>
       </div>
-      <div className="mt-4 pt-4 border-t-2 border-gray-100 group-hover:border-black transition-colors flex justify-between items-center">
+      <div className="mt-2 flex justify-between items-center">
         <div className="flex flex-col">
             {product.descuento > 0 ? (
                 <div className="flex items-center gap-2">
-                    <p className="font-mono font-black text-xl text-red-600">{formatPrice(product.precio * (1 - product.descuento / 100))}</p>
-                    <p className="font-mono text-xs text-gray-400 line-through decoration-red-400/50 decoration-2">{formatPrice(product.precio)}</p>
+                    <p className="font-semibold text-red-600">S/. {(product.precio * (1 - product.descuento / 100)).toLocaleString()}</p>
+                    <p className="text-xs text-gray-400 line-through">S/. {product.precio?.toLocaleString()}</p>
                 </div>
             ) : (
-                <p className="font-mono font-bold text-lg leading-none">{formatPrice(product.precio)}</p>
+                <p className="font-semibold text-gray-900">S/. {product.precio?.toLocaleString()}</p>
             )}
         </div>
+      </div>
+      
+      {/* Botón sutil en hover (StockX style) */}
+      <div className={`absolute top-4 right-4 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+          {product.stock_actual > 0 && !hasVariants && (
+              <button
+                onClick={handleAdd}
+                className="bg-white p-2 rounded-full shadow-md text-gray-700 hover:text-black hover:bg-gray-50 transition-colors"
+                title="Agregar al carrito"
+              >
+                  <ShoppingCart size={18} strokeWidth={2} />
+              </button>
+          )}
       </div>
     </div>
   </div>
@@ -213,16 +308,16 @@ const ProductCard = React.memo(({ product, onAddToCart }) => {
 });
 
 const CheckoutStepIndicator = ({ step }) => (
-  <div className="flex justify-between mb-8 px-2 relative">
-     <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200 -z-10"></div>
+  <div className="flex justify-between mb-8 px-4 relative">
+     <div className="absolute top-1/2 left-0 w-full h-[1px] bg-gray-200 -z-10"></div>
     {['cart', 'shipping', 'payment'].map((s) => {
         const isActive = step === s || (step === 'success');
         const isPast = ['shipping', 'payment', 'success'].includes(step) && s === 'cart' 
             || ['payment', 'success'].includes(step) && s === 'shipping';
         return (
-            <div key={s} className={`flex flex-col items-center bg-white px-2 ${isActive || isPast ? 'text-black' : 'text-gray-300'}`}>
-                <div className={`w-4 h-4 rounded-full border-2 ${isActive || isPast ? 'border-black bg-black' : 'border-gray-300 bg-white'} mb-1`}></div>
-                <span className="text-[10px] uppercase font-bold tracking-widest">{s}</span>
+            <div key={s} className={`flex flex-col items-center bg-white px-2 ${isActive || isPast ? 'text-black' : 'text-gray-400'}`}>
+                <div className={`w-3 h-3 rounded-full border-2 ${isActive || isPast ? 'border-black bg-black' : 'border-gray-300 bg-white'} mb-2`}></div>
+                <span className="text-[10px] uppercase font-semibold tracking-wider">{s}</span>
             </div>
         )
     })}
@@ -270,16 +365,13 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
                     })
                 });
                 if (res.ok) {
-                    // Generar mensaje de WhatsApp
                     const productList = cart.map(item => 
                         `* ${item.nombre} (Cod: ${item.codigo}) x${item.cantidad || 1} - ${formatPrice(item.precio * (item.cantidad || 1))}`
                     ).join('%0A');
                     
                     const message = `Hola, mi nombre es *${shippingData.nombre}*. Quiero comprar estos productos:%0A%0A${productList}%0A%0A*TOTAL: ${formatPrice(total)}*%0A%0A_Enviado desde la tienda web._`;
-                    
                     const whatsappUrl = `https://wa.me/${whatsappNumber || '51921385472'}?text=${message}`;
                     
-                    // Pequeño delay para que el usuario vea el cambio de estado antes de la redirección
                     setTimeout(() => {
                         window.open(whatsappUrl, '_blank');
                     }, 1000);
@@ -300,56 +392,56 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
-            <div className="bg-white w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] relative flex flex-col shadow-2xl overflow-hidden sm:border-2 sm:border-black">
-                <div className="p-6 border-b-2 border-black flex justify-between items-center bg-gray-50">
-                    <h2 className="text-xl font-black uppercase tracking-tighter">
-                        {step === 'success' ? 'Orden Confirmada' : 'Checkout Seguro'}
+        <div className="fixed inset-0 z-[100] flex items-center justify-end sm:justify-center p-0 sm:p-4 animate-fade-in">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
+            <div className="bg-white w-full sm:w-[500px] h-full sm:h-[85vh] relative flex flex-col shadow-2xl sm:rounded-xl overflow-hidden transform translate-x-0 transition-transform">
+                <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white">
+                    <h2 className="text-lg font-semibold tracking-wide">
+                        {step === 'success' ? 'Orden Confirmada' : 'Checkout'}
                     </h2>
-                    <button onClick={onClose} className="p-2 hover:bg-black hover:text-white transition-colors border-2 border-transparent">
-                        <X className="w-6 h-6" />
+                    <button onClick={onClose} className="p-2 text-gray-500 hover:text-black transition-colors rounded-full hover:bg-gray-50">
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+                <div className="flex-1 overflow-y-auto p-6">
                     {step !== 'success' && <CheckoutStepIndicator step={step} />}
 
                     {step === 'cart' && (
                         <div className="space-y-6">
                             {cart.length === 0 ? (
-                                <p className="text-center font-mono py-10">Tu carrito está vacío.</p>
+                                <p className="text-center text-gray-500 py-10">Tu carrito está vacío.</p>
                             ) : (
                                 cart.map((item) => (
-                                    <div key={item.codigo} className="flex gap-4 border-b border-gray-100 pb-4">
-                                        <div className="w-20 h-20 bg-gray-100 flex-shrink-0 border border-gray-200">
-                                            <img src={item.imagen_url} className="w-full h-full object-contain p-1 mix-blend-multiply" alt="" />
+                                    <div key={item.codigo} className="flex gap-4 pb-4">
+                                        <div className="w-20 h-20 bg-gray-50 rounded-lg flex-shrink-0 flex items-center justify-center p-2">
+                                            <img src={item.imagen_url} className="w-full h-full object-contain mix-blend-multiply" alt="" />
                                         </div>
-                                        <div className="flex-1">
+                                        <div className="flex-1 flex flex-col justify-center">
                                             <div className="flex justify-between items-start">
-                                                <h4 className="font-bold text-sm uppercase">{item.nombre}</h4>
+                                                <h4 className="font-medium text-sm leading-tight text-gray-900 pr-4">{item.nombre}</h4>
                                                 <button 
                                                     onClick={() => setItemToRemove(item.codigo)}
-                                                    className="p-1 px-2 text-gray-300 hover:text-red-500 transition-colors"
+                                                    className="text-gray-400 hover:text-red-500 transition-colors"
                                                     title="Eliminar producto"
                                                 >
-                                                    <Trash2 size={14} />
+                                                    <Trash2 size={16} />
                                                 </button>
                                             </div>
-                                            <p className="text-xs font-mono text-gray-500 mb-2">{item.codigo}</p>
+                                            <p className="text-[11px] text-gray-500 mb-2 mt-1 uppercase tracking-wider">{item.codigo}</p>
                                             <div className="flex justify-between items-center">
                                                 <div className="flex flex-col">
                                                     {item.descuento > 0 ? (
                                                         <div className="flex items-center gap-2">
-                                                            <p className="font-bold text-sm text-red-600">{formatPrice(item.precio)}</p>
+                                                            <p className="font-semibold text-sm text-red-600">{formatPrice(item.precio)}</p>
                                                             <p className="text-[10px] text-gray-400 line-through">{formatPrice(item.precio_original)}</p>
                                                         </div>
                                                     ) : (
-                                                        <p className="font-bold text-sm">{formatPrice(item.precio)}</p>
+                                                        <p className="font-semibold text-sm text-gray-900">{formatPrice(item.precio)}</p>
                                                     )}
                                                 </div>
-                                                <div className="bg-black text-white px-2 py-0.5 text-[10px] font-black uppercase">
-                                                    CANT: {item.cantidad || 1}
+                                                <div className="text-gray-500 text-xs font-medium">
+                                                    Cant: {item.cantidad || 1}
                                                 </div>
                                             </div>
                                         </div>
@@ -357,9 +449,9 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
                                 ))
                             )}
                             {cart.length > 0 && (
-                                <div className="bg-gray-50 p-4 border border-gray-200">
-                                    <div className="flex justify-between font-bold text-lg mb-1">
-                                        <span>TOTAL</span>
+                                <div className="border-t border-gray-100 pt-4 mt-2">
+                                    <div className="flex justify-between font-semibold text-lg text-gray-900">
+                                        <span>Total</span>
                                         <span>{formatPrice(total)}</span>
                                     </div>
                                 </div>
@@ -368,82 +460,88 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
                     )}
 
                     {step === 'shipping' && (
-                        <div className="space-y-4">
-                            <h3 className="font-bold uppercase mb-4 flex items-center gap-2"><MapPin className="w-4 h-4" /> Datos de Envío</h3>
-                            {error && <p className="text-red-500 text-xs font-bold uppercase">{error}</p>}
-                            <div className="grid grid-cols-2 gap-4">
-                                <input 
-                                    placeholder="Nombre Completo" 
-                                    className="col-span-2 p-3 border-2 border-gray-200 focus:border-black outline-none font-mono text-sm" 
-                                    value={shippingData.nombre}
-                                    onChange={e => setShippingData({...shippingData, nombre: e.target.value})}
-                                />
-                                <input 
-                                    placeholder="Dirección" 
-                                    className="col-span-2 p-3 border-2 border-gray-200 focus:border-black outline-none font-mono text-sm" 
-                                    value={shippingData.direccion}
-                                    onChange={e => setShippingData({...shippingData, direccion: e.target.value})}
-                                />
-                                <input 
-                                    placeholder="Teléfono / WhatsApp" 
-                                    className="col-span-2 p-3 border-2 border-gray-200 focus:border-black outline-none font-mono text-sm" 
-                                    value={shippingData.telefono}
-                                    onChange={e => setShippingData({...shippingData, telefono: e.target.value})}
-                                />
+                        <div className="space-y-5">
+                            <h3 className="font-semibold text-sm text-gray-900 flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-500" /> Dirección de Envío</h3>
+                            {error && <p className="text-red-500 text-xs font-medium bg-red-50 p-3 rounded-md">{error}</p>}
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Nombre Completo</label>
+                                    <input 
+                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md focus:border-black focus:ring-1 focus:ring-black outline-none text-sm transition-all" 
+                                        value={shippingData.nombre}
+                                        onChange={e => setShippingData({...shippingData, nombre: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Dirección</label>
+                                    <input 
+                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md focus:border-black focus:ring-1 focus:ring-black outline-none text-sm transition-all" 
+                                        value={shippingData.direccion}
+                                        onChange={e => setShippingData({...shippingData, direccion: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Teléfono / WhatsApp</label>
+                                    <input 
+                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md focus:border-black focus:ring-1 focus:ring-black outline-none text-sm transition-all" 
+                                        value={shippingData.telefono}
+                                        onChange={e => setShippingData({...shippingData, telefono: e.target.value})}
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}
 
                     {step === 'payment' && (
                         <div className="space-y-6">
-                            {error && <p className="text-red-500 text-xs font-bold uppercase">{error}</p>}
-                            <div className="bg-black text-white p-4 text-center mb-6">
-                                <span className="font-mono text-sm">TOTAL A PAGAR:</span>
-                                <div className="text-3xl font-black">{formatPrice(total)}</div>
+                            {error && <p className="text-red-500 text-xs font-medium bg-red-50 p-3 rounded-md">{error}</p>}
+                            <div className="bg-gray-50 rounded-xl p-6 text-center border border-gray-100 mb-6">
+                                <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total a Pagar</span>
+                                <div className="text-3xl font-semibold mt-1 text-gray-900">{formatPrice(total)}</div>
                             </div>
                             <div className="space-y-3">
-                                <label className="flex items-center gap-4 p-4 border-2 border-black cursor-pointer bg-gray-50">
-                                    <CreditCard className="w-6 h-6" />
+                                <label className="flex items-center gap-4 p-4 border border-black rounded-lg cursor-pointer bg-white shadow-sm">
+                                    <CreditCard className="w-5 h-5 text-gray-700" />
                                     <div className="flex-1">
-                                        <div className="font-bold text-sm uppercase">Acordar por WhatsApp</div>
-                                        <div className="text-xs text-gray-500">Coordinaremos el pago por interno</div>
+                                        <div className="font-semibold text-sm text-gray-900">Acordar por WhatsApp</div>
+                                        <div className="text-xs text-gray-500 mt-0.5">Coordinaremos el pago de forma segura</div>
                                     </div>
-                                    <div className="w-4 h-4 border-2 border-black rounded-full bg-black"></div>
+                                    <div className="w-4 h-4 border-4 border-black rounded-full bg-white"></div>
                                 </label>
                             </div>
                         </div>
                     )}
 
                     {step === 'success' && (
-                        <div className="text-center py-10">
-                            <div className="w-24 h-24 bg-neon-green rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-black">
-                                <Check className="w-12 h-12 text-black" strokeWidth={4} />
+                        <div className="text-center py-12">
+                            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Check className="w-10 h-10 text-green-600" strokeWidth={3} />
                             </div>
-                            <h2 className="text-3xl font-black uppercase mb-2">¡Orden Recibida!</h2>
-                            <p className="max-w-md mx-auto text-gray-600 mb-8">
-                                Gracias por tu compra. Nos estaremos contactando en breve para la entrega.
+                            <h2 className="text-2xl font-semibold mb-3 text-gray-900">¡Orden Recibida!</h2>
+                            <p className="text-gray-500 text-sm mb-8 leading-relaxed px-4">
+                                Gracias por tu compra. Nos estaremos contactando en breve para procesar la entrega.
                             </p>
-                            <button onClick={onClose} className="w-full bg-black text-white py-4 font-bold uppercase tracking-widest hover:bg-gray-900">
-                                Volver a la tienda
+                            <button onClick={onClose} className="w-full bg-black text-white py-4 rounded-md font-medium hover:bg-gray-800 transition-colors">
+                                Volver a la Tienda
                             </button>
                         </div>
                     )}
                 </div>
 
                 {step !== 'success' && (
-                    <div className="p-6 border-t-2 border-black bg-white flex gap-4">
+                    <div className="p-5 border-t border-gray-100 bg-white flex gap-3">
                         {step !== 'cart' && (
-                            <button onClick={() => setStep(step === 'payment' ? 'shipping' : 'cart')} className="flex-1 py-4 font-bold uppercase text-sm border-2 border-black hover:bg-gray-100">
+                            <button onClick={() => setStep(step === 'payment' ? 'shipping' : 'cart')} className="px-6 py-3.5 font-medium text-sm border border-gray-200 rounded-md hover:bg-gray-50 text-gray-700 transition-colors">
                                 Atrás
                             </button>
                         )}
                         <button 
                             onClick={handleNext}
                             disabled={cart.length === 0 || loading}
-                            className="flex-[2] py-4 bg-black text-white font-bold uppercase text-sm tracking-widest hover:bg-neon-green hover:text-black border-2 border-black disabled:opacity-50 flex justify-center items-center gap-2"
+                            className="flex-1 py-3.5 bg-black text-white font-medium text-sm rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 transition-colors"
                         >
                             {loading ? 'Procesando...' : step === 'payment' ? 'Confirmar Pedido' : 'Continuar'}
-                            {!loading && <ArrowRight className="w-4 h-4" />}
+                            {!loading && step !== 'payment' && <ArrowRight className="w-4 h-4" />}
                         </button>
                     </div>
                 )}
@@ -470,47 +568,47 @@ const Sidebar = ({ isOpen, onClose, selectedCategoryId, onSelectCategory, allCat
 
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 z-[100] flex">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-80 max-w-[80vw] bg-white h-full border-r-2 border-black flex flex-col shadow-2xl">
-                <div className="p-6 border-b-2 border-black flex justify-between items-center bg-neon-green">
-                    <h2 className="font-black text-2xl uppercase tracking-tighter italic">MENU</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-black hover:text-white transition-colors border-2 border-black bg-white">
-                        <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-[100] flex animate-fade-in">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-80 max-w-[85vw] bg-white h-full border-r border-gray-100 flex flex-col shadow-2xl transform translate-x-0 transition-transform">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
+                    <img src="/logo juschiri.jpeg" alt="JUS CHIRI" className="h-6 object-contain" />
+                    <button onClick={onClose} className="p-2 text-gray-500 hover:text-black hover:bg-gray-50 rounded-full transition-colors">
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 space-y-8">
                     <div className="space-y-4">
-                        <h3 className="font-mono text-xs text-gray-500 uppercase font-bold tracking-widest border-b border-gray-200 pb-2">Catálogo</h3>
+                        <h3 className="text-[11px] text-gray-500 uppercase font-semibold tracking-widest border-b border-gray-100 pb-2">Catálogo</h3>
                         <button
                             onClick={() => { onSelectCategory(null); onSelectType(null); onSelectSubcategory(null); onClose(); }}
-                            className={`block w-full text-left font-black text-2xl uppercase tracking-tighter hover:text-neon-green transition-colors ${!selectedCategoryId && !selectedBrand ? 'text-black underline' : 'text-gray-400'}`}
+                            className={`block w-full text-left text-lg font-medium transition-colors ${!selectedCategoryId && !selectedBrand ? 'text-black' : 'text-gray-500 hover:text-gray-800'}`}
                         >
-                            Todos
+                            Ver Todo
                         </button>
                         {allCategories.map(cat => (
                             <div key={cat._id} className="space-y-2">
                                 <button
                                     onClick={() => { onSelectCategory(cat._id); onSelectType(null); onSelectSubcategory(null); }}
-                                    className={`block w-full text-left font-black text-xl uppercase tracking-tighter hover:text-neon-green transition-colors ${selectedCategoryId === cat._id ? 'text-black underline' : 'text-gray-400'}`}
+                                    className={`block w-full text-left text-lg font-medium transition-colors ${selectedCategoryId === cat._id ? 'text-black' : 'text-gray-500 hover:text-gray-800'}`}
                                 >
                                     {cat.name}
                                 </button>
                                 {selectedCategoryId === cat._id && cat.types && cat.types.length > 0 && (
-                                    <div className="pl-4 space-y-3 border-l-2 border-neon-green ml-2 py-2">
+                                    <div className="pl-4 space-y-3 border-l border-gray-200 ml-2 py-2">
                                         {cat.types.map(type => (
                                             <div key={type._id} className="space-y-2">
                                                 <button
                                                     onClick={() => { onSelectType(type._id); onSelectSubcategory(null); }}
-                                                    className={`block w-full text-left font-bold text-md uppercase tracking-wide hover:text-black transition-colors ${selectedTypeId === type._id ? 'text-black underline' : 'text-gray-400'}`}
+                                                    className={`block w-full text-left text-sm font-medium transition-colors ${selectedTypeId === type._id ? 'text-black' : 'text-gray-500 hover:text-gray-800'}`}
                                                 >
                                                     {type.name}
                                                 </button>
                                                 {selectedTypeId === type._id && type.subcategories && type.subcategories.length > 0 && (
-                                                    <div className="pl-4 space-y-2 border-l border-gray-300 ml-1 py-1">
+                                                    <div className="pl-4 space-y-2 border-l border-gray-100 ml-1 py-1">
                                                         <button 
                                                             onClick={() => { onSelectSubcategory(null); onClose(); }}
-                                                            className={`block w-full text-left font-mono text-xs uppercase tracking-wide hover:text-black transition-colors ${!selectedSubcategoryId ? 'text-black font-bold' : 'text-gray-400'}`}
+                                                            className={`block w-full text-left text-[13px] transition-colors ${!selectedSubcategoryId ? 'text-black font-medium' : 'text-gray-500 hover:text-gray-800'}`}
                                                         >
                                                             Todo {type.name}
                                                         </button>
@@ -518,7 +616,7 @@ const Sidebar = ({ isOpen, onClose, selectedCategoryId, onSelectCategory, allCat
                                                             <button 
                                                                 key={sub._id}
                                                                 onClick={() => { onSelectSubcategory(sub._id); onClose(); }}
-                                                                className={`block w-full text-left font-mono text-xs uppercase tracking-wide hover:text-black transition-colors ${selectedSubcategoryId === sub._id ? 'text-black font-bold underline' : 'text-gray-400'}`}
+                                                                className={`block w-full text-left text-[13px] transition-colors ${selectedSubcategoryId === sub._id ? 'text-black font-medium' : 'text-gray-500 hover:text-gray-800'}`}
                                                             >
                                                                 {sub.name}
                                                             </button>
@@ -533,21 +631,21 @@ const Sidebar = ({ isOpen, onClose, selectedCategoryId, onSelectCategory, allCat
                         ))}
                     </div>
 
-                    <div className="border-t-2 border-gray-100 pt-6 space-y-4">
-                        <div className="flex flex-col gap-2 border-b border-gray-200 pb-2">
-                            <h3 className="font-mono text-xs text-gray-500 uppercase font-bold tracking-widest">Marcas</h3>
+                    <div className="border-t border-gray-100 pt-6 space-y-4">
+                        <div className="flex flex-col gap-3 border-b border-gray-100 pb-3">
+                            <h3 className="text-[11px] text-gray-500 uppercase font-semibold tracking-widest">Marcas</h3>
                             <input 
                                 type="text"
                                 placeholder="Buscar marca..."
                                 value={brandSearch}
                                 onChange={(e) => setBrandSearch(e.target.value)}
-                                className="w-full px-2 py-1 text-sm border-2 border-gray-200 focus:border-black outline-none font-mono uppercase"
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm outline-none focus:border-black transition-colors"
                             />
                         </div>
-                        <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar pr-2">
+                        <div className="space-y-3 max-h-48 overflow-y-auto no-scrollbar pr-2">
                             <button
                                 onClick={() => { onSelectBrand(null); onClose(); }}
-                                className={`block w-full text-left font-mono text-sm uppercase tracking-wide hover:text-black transition-colors ${!selectedBrand ? 'text-black font-bold underline' : 'text-gray-400'}`}
+                                className={`block w-full text-left text-sm transition-colors ${!selectedBrand ? 'text-black font-medium' : 'text-gray-500 hover:text-gray-800'}`}
                             >
                                 Todas las marcas
                             </button>
@@ -555,16 +653,16 @@ const Sidebar = ({ isOpen, onClose, selectedCategoryId, onSelectCategory, allCat
                                 <button
                                     key={brand}
                                     onClick={() => { onSelectBrand(brand); onClose(); }}
-                                    className={`block w-full text-left font-mono text-sm uppercase tracking-wide hover:text-black transition-colors ${selectedBrand === brand ? 'text-black font-bold underline' : 'text-gray-400'}`}
+                                    className={`block w-full text-left text-sm transition-colors ${selectedBrand === brand ? 'text-black font-medium' : 'text-gray-500 hover:text-gray-800'}`}
                                 >
                                     {brand}
                                 </button>
                             ))}
                         </div>
                     </div>
-                    <div className="border-t-2 border-gray-100 pt-6 space-y-4">
-                        <h3 className="font-mono text-xs text-gray-500 uppercase font-bold tracking-widest">Portal</h3>
-                        <a href="/admin" className="flex items-center gap-2 text-sm font-bold uppercase hover:underline">
+                    <div className="border-t border-gray-100 pt-6 space-y-4">
+                        <h3 className="text-[11px] text-gray-500 uppercase font-semibold tracking-widest">Portal</h3>
+                        <a href="/admin" className="flex items-center gap-2 text-sm text-gray-500 hover:text-black hover:underline transition-colors">
                             Panel Técnico / Admin
                         </a>
                     </div>
@@ -772,53 +870,52 @@ export default function Storefront() {
         whatsappNumber={settings.whatsapp_number}
       />
 
-      <Hero />
+      <HeroSlider customSlides={settings.hero_slides} />
+      <TrendingGallery customGallery={settings.trending_gallery} />
 
       <main id="shop" className="flex-1 w-full max-w-[1920px] mx-auto">
-        {/* Nav sticky (Pills & Filtros Toggle) */}
-        <div className="sticky top-20 sm:top-28 z-40 bg-white/95 backdrop-blur-md border-b-2 border-black flex flex-col transition-all">
-            <div className="flex justify-between items-center p-3 sm:p-4 sm:px-8 gap-2 sm:gap-4 border-b border-gray-100/50">
+        <div className="sticky top-20 sm:top-28 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 flex flex-col transition-all">
+            <div className="flex justify-between items-center p-4 sm:px-8 gap-4 border-b border-gray-100/50">
                 
-                {/* Categorías Principales y Filtros Activos */}
                 <div className="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar w-full py-1">
                     <button
                         onClick={() => { setSelectedCategoryId(null); setSelectedTypeId(null); setSelectedSubcategoryId(null); setSelectedBrand(null); setOnSaleOnly(false); }}
-                        className={`font-mono text-xs sm:text-sm shadow-sm uppercase px-4 sm:px-5 py-2 border-2 transition-all flex-shrink-0 ${
+                        className={`text-sm px-5 py-2 rounded-full border transition-all flex-shrink-0 ${
                             !selectedCategoryId && !selectedBrand && !onSaleOnly
-                            ? 'bg-black text-white border-black font-bold shadow-[3px_3px_0px_0px_rgba(204,255,0,1)] -translate-y-0.5' 
-                            : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black hover:-translate-y-0.5'
+                            ? 'bg-black text-white border-black font-medium' 
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
                         }`}
                     >
                         Todos
                     </button>
                     <button
                         onClick={() => { setOnSaleOnly(!onSaleOnly); setSelectedCategoryId(null); setSelectedTypeId(null); setSelectedSubcategoryId(null); setSelectedBrand(null); }}
-                        className={`font-mono text-xs sm:text-sm shadow-sm uppercase px-4 sm:px-5 py-2 border-2 transition-all flex-shrink-0 ${
+                        className={`text-sm px-5 py-2 rounded-full border transition-all flex-shrink-0 ${
                             onSaleOnly
-                            ? 'bg-red-600 text-white border-black font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5' 
-                            : 'bg-white text-red-500 border-red-200 hover:border-red-600 hover:text-red-600 hover:-translate-y-0.5'
+                            ? 'bg-red-50 text-red-600 border-red-200 font-medium' 
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
                         }`}
                     >
-                        % Ofertas
+                        Ofertas
                     </button>
                     {selectedBrand && (
                         <button
                             onClick={() => setSelectedBrand(null)}
-                            className="font-mono text-xs sm:text-sm shadow-sm uppercase px-4 sm:px-5 py-2 border-2 transition-all flex-shrink-0 bg-neon-green text-black border-black font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5 flex items-center gap-2 group"
+                            className="text-sm px-5 py-2 rounded-full border transition-all flex-shrink-0 bg-gray-900 text-white border-gray-900 font-medium flex items-center gap-2 group"
                             title="Quitar filtro de marca"
                         >
                             Marca: {selectedBrand}
-                            <X className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-125 transition-transform" />
+                            <X className="w-3 h-3 group-hover:scale-125 transition-transform" />
                         </button>
                     )}
                     {allCategories.map((cat) => (
                         <button
                             key={cat._id}
                             onClick={() => { setSelectedCategoryId(cat._id); setSelectedTypeId(null); setSelectedSubcategoryId(null); setSelectedBrand(null); }}
-                            className={`font-mono text-xs sm:text-sm shadow-sm uppercase px-4 sm:px-5 py-2 border-2 transition-all flex-shrink-0 ${
+                            className={`text-sm px-5 py-2 rounded-full border transition-all flex-shrink-0 ${
                                 selectedCategoryId === cat._id
-                                ? 'bg-black text-white border-black font-bold shadow-[3px_3px_0px_0px_rgba(204,255,0,1)] -translate-y-0.5' 
-                                : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black hover:-translate-y-0.5'
+                                ? 'bg-black text-white border-black font-medium' 
+                                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
                             }`}
                         >
                             {cat.name}
@@ -826,28 +923,25 @@ export default function Storefront() {
                     ))}
                 </div>
 
-                {/* Botón Switch Filtros */}
                 <button 
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`flex-shrink-0 flex items-center justify-center gap-2 font-mono font-bold text-sm uppercase px-3 sm:px-4 py-2 border-2 transition-colors ${showFilters ? 'bg-neon-green border-black text-black' : 'bg-white border-gray-200 text-gray-600 hover:border-black hover:text-black'}`}
+                  className={`flex-shrink-0 flex items-center justify-center gap-2 text-sm px-4 py-2 rounded-md border transition-colors ${showFilters ? 'bg-gray-100 border-gray-200 text-gray-900 font-medium' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
                   title="Filtros"
                 >
-                  <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <SlidersHorizontal className="w-4 h-4" />
                   <span className="hidden sm:inline">Filtros</span>
                 </button>
             </div>
 
-            {/* Tipos y Subcategorías Secundarias (Si hay categoría activa) */}
             {selectedCategoryId && allCategories.find(c => c._id === selectedCategoryId)?.types?.length > 0 && (
-                <div className="bg-gray-50/90 border-b border-gray-200 flex flex-col w-full shadow-inner">
-                    {/* Fila de Tipos */}
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 sm:px-8 py-2 border-b border-gray-100">
+                <div className="bg-gray-50/50 border-b border-gray-200 flex flex-col w-full shadow-inner">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 sm:px-8 py-2.5 border-b border-gray-100">
                         <button
                             onClick={() => { setSelectedTypeId(null); setSelectedSubcategoryId(null); }}
-                            className={`font-mono text-[10px] sm:text-xs uppercase px-4 py-1.5 border-2 transition-all flex-shrink-0 rounded-full ${
+                            className={`text-[13px] px-4 py-1.5 rounded-md transition-colors flex-shrink-0 ${
                                 !selectedTypeId
-                                ? 'bg-black text-white border-black font-bold shadow-[2px_2px_0px_0px_rgba(204,255,0,1)]' 
-                                : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black'
+                                ? 'bg-white shadow-sm border border-gray-200 text-gray-900 font-medium' 
+                                : 'text-gray-500 hover:text-gray-900'
                             }`}
                         >
                             Ver Todo
@@ -856,10 +950,10 @@ export default function Storefront() {
                             <button
                                 key={type._id}
                                 onClick={() => { setSelectedTypeId(type._id); setSelectedSubcategoryId(null); }}
-                                className={`font-mono text-[10px] sm:text-xs uppercase px-4 py-1.5 border-2 transition-all flex-shrink-0 rounded-full ${
+                                className={`text-[13px] px-4 py-1.5 rounded-md transition-colors flex-shrink-0 ${
                                     selectedTypeId === type._id
-                                    ? 'bg-black text-white border-black font-bold shadow-[2px_2px_0px_0px_rgba(204,255,0,1)]' 
-                                    : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black'
+                                    ? 'bg-white shadow-sm border border-gray-200 text-gray-900 font-medium' 
+                                    : 'text-gray-500 hover:text-gray-900'
                                 }`}
                             >
                                 {type.name}
@@ -867,15 +961,14 @@ export default function Storefront() {
                         ))}
                     </div>
 
-                    {/* Fila de Subcategorías si hay un tipo seleccionado */}
                     {selectedTypeId && allCategories.find(c => c._id === selectedCategoryId)?.types?.find(t => t._id === selectedTypeId)?.subcategories?.length > 0 && (
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 sm:px-8 py-2 bg-gray-100/50">
+                        <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 sm:px-8 py-2 bg-gray-100/30">
                             <button
                                 onClick={() => setSelectedSubcategoryId(null)}
-                                className={`font-mono text-[10px] sm:text-xs uppercase px-4 py-1 border transition-all flex-shrink-0 ${
+                                className={`text-[12px] px-3 py-1 rounded-md transition-colors flex-shrink-0 ${
                                     !selectedSubcategoryId
-                                    ? 'bg-black text-white border-black font-bold' 
-                                    : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black'
+                                    ? 'bg-white shadow-sm border border-gray-200 text-gray-900 font-medium' 
+                                    : 'text-gray-500 hover:text-gray-900'
                                 }`}
                             >
                                 Todas las subcategorías
@@ -884,10 +977,10 @@ export default function Storefront() {
                                 <button
                                     key={sub._id}
                                     onClick={() => setSelectedSubcategoryId(sub._id)}
-                                    className={`font-mono text-[10px] sm:text-xs uppercase px-4 py-1 border transition-all flex-shrink-0 ${
+                                    className={`text-[12px] px-3 py-1 rounded-md transition-colors flex-shrink-0 ${
                                         selectedSubcategoryId === sub._id
-                                        ? 'bg-black text-white border-black font-bold' 
-                                        : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black'
+                                        ? 'bg-white shadow-sm border border-gray-200 text-gray-900 font-medium' 
+                                        : 'text-gray-500 hover:text-gray-900'
                                     }`}
                                 >
                                     {sub.name}
@@ -898,15 +991,13 @@ export default function Storefront() {
                 </div>
             )}
 
-            {/* Panel de Filtros Expandible */}
             {showFilters && (
-                <div className="border-t-2 border-black bg-gray-50 p-4 sm:px-8 animate-fade-in flex flex-wrap gap-6 items-center">
-                    {/* Subcategorías dinámicas si hay categoría seleccionada */}
+                <div className="bg-gray-50 p-6 sm:px-8 animate-fade-in flex flex-wrap gap-6 items-center border-b border-gray-200 shadow-inner">
                     {selectedCategoryId && allCategories.find(c => c._id === selectedCategoryId)?.subcategories?.length > 0 && (
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs uppercase font-bold text-gray-500">Sub:</span>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Sub:</span>
                             <select 
-                                className="bg-white border-2 border-gray-200 p-2 font-mono text-xs uppercase outline-none focus:border-black"
+                                className="bg-white border border-gray-200 rounded-md py-1.5 px-3 text-sm outline-none focus:border-black transition-colors"
                                 value={selectedSubcategoryId || ""}
                                 onChange={(e) => setSelectedSubcategoryId(e.target.value || null)}
                             >
@@ -918,11 +1009,10 @@ export default function Storefront() {
                         </div>
                     )}
 
-                    {/* Selección de Marca en Filtros Rápidos */}
-                    <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs uppercase font-bold text-gray-500">Marca:</span>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Marca:</span>
                         <select 
-                            className="bg-white border-2 border-gray-200 p-2 font-mono text-xs uppercase outline-none focus:border-black"
+                            className="bg-white border border-gray-200 rounded-md py-1.5 px-3 text-sm outline-none focus:border-black transition-colors"
                             value={selectedBrand || ""}
                             onChange={(e) => {
                                 const brand = e.target.value || null;
@@ -941,11 +1031,10 @@ export default function Storefront() {
                         </select>
                     </div>
 
-                    {/* Ordenamiento */}
-                    <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs uppercase font-bold text-gray-500">Orden:</span>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Orden:</span>
                         <select 
-                            className="bg-white border-2 border-gray-200 p-2 font-mono text-xs uppercase outline-none focus:border-black"
+                            className="bg-white border border-gray-200 rounded-md py-1.5 px-3 text-sm outline-none focus:border-black transition-colors"
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                         >
@@ -957,27 +1046,27 @@ export default function Storefront() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs uppercase font-bold text-gray-500">Precio S/.</span>
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Precio S/.</span>
                         <input 
                             type="number" 
                             placeholder="Min" 
                             value={priceMin}
                             onChange={(e) => setPriceMin(e.target.value)}
-                            className="w-20 p-2 border-2 border-gray-200 focus:border-black outline-none font-mono text-sm"
+                            className="w-20 p-1.5 border border-gray-200 rounded-md focus:border-black outline-none text-sm"
                         />
-                        <span className="font-mono text-gray-400">-</span>
+                        <span className="text-gray-400">-</span>
                         <input 
                             type="number" 
                             placeholder="Max" 
                             value={priceMax}
                             onChange={(e) => setPriceMax(e.target.value)}
-                            className="w-20 p-2 border-2 border-gray-200 focus:border-black outline-none font-mono text-sm"
+                            className="w-20 p-1.5 border border-gray-200 rounded-md focus:border-black outline-none text-sm"
                         />
                     </div>
 
                     <label className="flex items-center gap-2 cursor-pointer group">
-                        <div className={`w-5 h-5 flex justify-center items-center border-2 transition-colors ${inStockOnly ? 'bg-black border-black text-neon-green' : 'bg-white border-gray-300 group-hover:border-black'}`}>
-                            {inStockOnly && <Check className="w-4 h-4" strokeWidth={4} />}
+                        <div className={`w-4 h-4 flex justify-center items-center border rounded-sm transition-colors ${inStockOnly ? 'bg-black border-black text-white' : 'bg-white border-gray-300 group-hover:border-black'}`}>
+                            {inStockOnly && <Check className="w-3 h-3" strokeWidth={3} />}
                         </div>
                         <input 
                             type="checkbox" 
@@ -985,12 +1074,12 @@ export default function Storefront() {
                             checked={inStockOnly}
                             onChange={(e) => setInStockOnly(e.target.checked)}
                         />
-                        <span className="font-mono text-sm uppercase font-bold">Solo en Stock</span>
+                        <span className="text-sm font-medium text-gray-700">Solo en Stock</span>
                     </label>
 
                     <label className="flex items-center gap-2 cursor-pointer group">
-                        <div className={`w-5 h-5 flex justify-center items-center border-2 transition-colors ${onSaleOnly ? 'bg-red-600 border-black text-white' : 'bg-white border-gray-300 group-hover:border-black'}`}>
-                            {onSaleOnly && <Check className="w-4 h-4" strokeWidth={4} />}
+                        <div className={`w-4 h-4 flex justify-center items-center border rounded-sm transition-colors ${onSaleOnly ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-gray-300 group-hover:border-red-400'}`}>
+                            {onSaleOnly && <Check className="w-3 h-3" strokeWidth={3} />}
                         </div>
                         <input 
                             type="checkbox" 
@@ -998,7 +1087,7 @@ export default function Storefront() {
                             checked={onSaleOnly}
                             onChange={(e) => setOnSaleOnly(e.target.checked)}
                         />
-                        <span className="font-mono text-sm uppercase font-bold text-red-600">Solo Ofertas</span>
+                        <span className="text-sm font-medium text-gray-700">Solo Ofertas</span>
                     </label>
 
                     {(priceMin || priceMax || inStockOnly || onSaleOnly || searchQuery || selectedCategoryId || sortBy !== 'featured') && (
@@ -1014,7 +1103,7 @@ export default function Storefront() {
                                 setSelectedBrand(null);
                                 setSortBy('featured');
                             }}
-                            className="text-xs font-mono font-bold text-gray-500 underline hover:text-black ml-auto"
+                            className="text-xs font-medium text-gray-400 hover:text-black ml-auto transition-colors"
                          >
                              Limpiar Filtros
                          </button>
@@ -1024,19 +1113,16 @@ export default function Storefront() {
 
         </div>
 
-        {/* Banner de Ofertas si el filtro está activo */}
         {onSaleOnly && (
-            <div className="bg-red-600 text-white p-6 sm:px-8 flex justify-between items-center border-b-2 border-black animate-fade-in">
+            <div className="bg-red-50 text-red-600 p-6 sm:px-8 flex justify-between items-center border-b border-red-100 animate-fade-in">
                 <div>
-                    <h2 className="text-3xl font-black uppercase tracking-tighter italic">ZONA DE OFFERS</h2>
-                    <p className="font-mono text-[10px] sm:text-xs uppercase opacity-80 tracking-widest">Aprovecha los descuentos exclusivos en piezas seleccionadas.</p>
+                    <h2 className="text-2xl font-bold tracking-tight">Zona de Ofertas</h2>
+                    <p className="text-xs text-red-400 mt-1 uppercase tracking-widest font-medium">Descuentos exclusivos en piezas seleccionadas.</p>
                 </div>
-                <div className="text-5xl font-black opacity-10 hidden lg:block italic tracking-tighter">SALE SALE SALE</div>
             </div>
         )}
 
-        {/* Búsqueda en Móviles (Opcional, pero cubierto por la barra) */}
-        <div className="sm:hidden px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center">
+        <div className="sm:hidden px-4 py-3 bg-white border-b border-gray-100 flex items-center">
             <Search className="w-5 h-5 text-gray-400" />
             <input 
                 type="text"
@@ -1047,49 +1133,54 @@ export default function Storefront() {
                         document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
                     }
                 }}
-                placeholder="Buscar por nombre o código..."
-                className="w-full bg-transparent border-none outline-none font-mono text-sm px-3"
+                placeholder="Buscar por nombre o marca..."
+                className="w-full bg-transparent border-none outline-none text-sm px-3 font-medium"
             />
             {searchQuery && (
                 <X className="w-5 h-5 text-gray-400 cursor-pointer hover:text-red-500" onClick={() => setSearchQuery('')} />
             )}
         </div>
 
-        <div className="p-4 sm:px-8">
-            <p className="font-mono text-xs text-gray-500 uppercase">
+        <div className="p-4 sm:px-8 bg-gray-50/30">
+            <p className="text-xs text-gray-400 font-medium tracking-wide uppercase">
                 Mostrando {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
             </p>
         </div>
 
         {loading ? (
-            <div className="py-20 flex flex-col items-center justify-center gap-4">
-               <div className="w-12 h-12 border-4 border-gray-200 border-t-black rounded-full animate-spin"></div>
-               <div className="font-mono font-bold text-sm tracking-widest uppercase">Cargando Heat...</div>
+            <div className="py-32 flex flex-col items-center justify-center gap-4">
+               <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+               <div className="text-xs text-gray-500 font-medium tracking-widest uppercase">Cargando Catálogo...</div>
             </div>
         ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 border-t-2 border-l-2 border-gray-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 bg-gray-50/30">
               {filteredProducts.slice(0, displayLimit).map((product, index) => (
                 <div 
                     key={product.codigo} 
                     ref={index === filteredProducts.slice(0, displayLimit).length - 1 ? lastElementRef : null}
-                    className="border-r-2 border-b-2 border-gray-100 hover:border-black transition-colors z-0 hover:z-10 -ml-[2px] -mt-[2px] first:ml-0"
+                    className="border-r border-b border-transparent z-0 hover:z-10"
                 >
                     <ProductCard product={product} onAddToCart={handleAddToCart} />
                 </div>
               ))}
               {filteredProducts.length === 0 && (
-                  <div className="py-32 text-center col-span-full flex flex-col items-center gap-4">
-                      <Search className="w-12 h-12 text-gray-300" />
-                      <p className="font-mono text-lg font-bold text-gray-400 uppercase">No encontramos lo que buscas.</p>
-                      <button onClick={() => { setActiveSegment('Todos'); setSearchQuery(''); setPriceMin(''); setPriceMax(''); setInStockOnly(false); }} className="text-sm font-bold border-b-2 border-black hover:text-neon-green hover:border-neon-green transition-colors">Ver todo el catálogo</button>
+                  <div className="py-40 text-center col-span-full flex flex-col items-center gap-4">
+                      <Search className="w-12 h-12 text-gray-300" strokeWidth={1.5} />
+                      <p className="text-lg font-medium text-gray-500">No encontramos lo que buscas.</p>
+                      <button onClick={() => { setSearchQuery(''); setPriceMin(''); setPriceMax(''); setInStockOnly(false); setOnSaleOnly(false); setSelectedCategoryId(null); setSelectedBrand(null); }} className="text-sm font-medium text-black hover:text-gray-600 transition-colors underline decoration-gray-300 underline-offset-4">Ver todo el catálogo</button>
                   </div>
               )}
             </div>
         )}
       </main>
 
-      <footer className="bg-black text-white py-10 mt-auto border-t-8 border-neon-green text-center font-mono text-xs text-gray-500 uppercase">
-          Copyright © 2026 Jus Chiri International. All rights reserved.
+      <footer className="bg-white border-t border-gray-200 py-12 mt-auto text-center">
+          <div className="mb-6 flex justify-center">
+              <img src="/logo juschiri.jpeg" alt="JUS CHIRI" className="h-6 opacity-80 mix-blend-multiply" />
+          </div>
+          <p className="text-xs text-gray-400 font-medium tracking-widest uppercase">
+              Copyright © 2026 Jus Chiri International. Todos los derechos reservados.
+          </p>
       </footer>
     </div>
   );
