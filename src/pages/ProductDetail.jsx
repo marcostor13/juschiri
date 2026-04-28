@@ -5,6 +5,8 @@ import { useCartStore } from '../store/cartStore';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
+const isVideo = (url) => url && url.match(/\.(mp4|webm|ogg|mov)$/i);
+
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -113,7 +115,11 @@ export default function ProductDetail() {
             <div className="space-y-4">
                 <div className="aspect-square bg-gray-50 rounded-xl overflow-hidden group flex items-center justify-center p-8">
                     {selectedImage ? (
-                        <img src={selectedImage} alt={product.nombre} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500 ease-out" />
+                        isVideo(selectedImage) ? (
+                            <video src={selectedImage} autoPlay loop muted playsInline className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out" />
+                        ) : (
+                            <img src={selectedImage} alt={product.nombre} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500 ease-out" />
+                        )
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
                             <ImageIcon size={48} strokeWidth={1} />
@@ -130,7 +136,11 @@ export default function ProductDetail() {
                                 onClick={() => setSelectedImage(img)}
                                 className={`w-20 h-20 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden transition-all ${selectedImage === img ? 'ring-2 ring-black ring-offset-2' : 'hover:opacity-75 opacity-100'}`}
                             >
-                                <img src={img} className="w-full h-full object-cover mix-blend-multiply p-2" alt=""/>
+                                {isVideo(img) ? (
+                                    <video src={img} autoPlay loop muted playsInline className="w-full h-full object-cover p-2" />
+                                ) : (
+                                    <img src={img} className="w-full h-full object-cover mix-blend-multiply p-2" alt=""/>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -223,7 +233,11 @@ export default function ProductDetail() {
                         {related.map(rel => (
                             <Link to={`/producto/${rel.codigo}`} key={rel._id} className="group cursor-pointer">
                                 <div className="aspect-[4/5] bg-gray-50 rounded-lg mb-4 overflow-hidden relative transition-all duration-300">
-                                    <img src={rel.imagen_url || 'https://via.placeholder.com/400'} alt={rel.nombre} className="w-full h-full object-contain mix-blend-multiply p-6 group-hover:scale-105 transition-transform duration-500" />
+                                    {isVideo(rel.imagen_url) ? (
+                                        <video src={rel.imagen_url} autoPlay loop muted playsInline className="w-full h-full object-contain p-6 group-hover:scale-105 transition-transform duration-500" />
+                                    ) : (
+                                        <img src={rel.imagen_url || 'https://via.placeholder.com/400'} alt={rel.nombre} className="w-full h-full object-contain mix-blend-multiply p-6 group-hover:scale-105 transition-transform duration-500" />
+                                    )}
                                 </div>
                                 <h3 className="font-medium text-sm line-clamp-2 leading-tight mb-1 text-gray-900 group-hover:underline">{rel.nombre}</h3>
                                 <p className="text-sm text-gray-500">S/. {rel.precio?.toLocaleString()}</p>

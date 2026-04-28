@@ -15,6 +15,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Componentes y Utilidades cargados
 
+const isVideo = (url) => url && url.match(/\.(mp4|webm|ogg|mov)$/i);
 
 // --- PRODUCT CARD COMPONENT (INTERNAL) ---
 const ProductRow = React.memo(({ p, onEdit, onDelete }) => (
@@ -517,15 +518,25 @@ export default function Backoffice() {
                                         <div className="flex gap-3">
                                             <div className="flex-1">
                                                 <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Color Fondo</label>
-                                                <input placeholder="bg-[#000000]" className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-[11px] font-mono outline-none focus:border-black transition-colors" value={slide.color || ''} onChange={e => {
-                                                    const ns = [...settings.hero_slides]; ns[idx].color = e.target.value; setSettings({...settings, hero_slides: ns});
-                                                }} />
+                                                <div className="flex items-center gap-2">
+                                                    <input type="color" className="w-8 h-8 rounded cursor-pointer border-0 p-0" value={slide.color?.startsWith('#') ? slide.color : '#000000'} onChange={e => {
+                                                        const ns = [...settings.hero_slides]; ns[idx].color = e.target.value; setSettings({...settings, hero_slides: ns});
+                                                    }} />
+                                                    <input placeholder="#000000" className="flex-1 p-2 bg-white border border-gray-200 rounded-lg text-[11px] font-mono outline-none focus:border-black transition-colors" value={slide.color || ''} onChange={e => {
+                                                        const ns = [...settings.hero_slides]; ns[idx].color = e.target.value; setSettings({...settings, hero_slides: ns});
+                                                    }} />
+                                                </div>
                                             </div>
                                             <div className="flex-1">
                                                 <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Color Texto</label>
-                                                <input placeholder="text-white" className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-[11px] font-mono outline-none focus:border-black transition-colors" value={slide.textColor || ''} onChange={e => {
-                                                    const ns = [...settings.hero_slides]; ns[idx].textColor = e.target.value; setSettings({...settings, hero_slides: ns});
-                                                }} />
+                                                <div className="flex items-center gap-2">
+                                                    <input type="color" className="w-8 h-8 rounded cursor-pointer border-0 p-0" value={slide.textColor?.startsWith('#') ? slide.textColor : '#ffffff'} onChange={e => {
+                                                        const ns = [...settings.hero_slides]; ns[idx].textColor = e.target.value; setSettings({...settings, hero_slides: ns});
+                                                    }} />
+                                                    <input placeholder="#ffffff" className="flex-1 p-2 bg-white border border-gray-200 rounded-lg text-[11px] font-mono outline-none focus:border-black transition-colors" value={slide.textColor || ''} onChange={e => {
+                                                        const ns = [...settings.hero_slides]; ns[idx].textColor = e.target.value; setSettings({...settings, hero_slides: ns});
+                                                    }} />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -535,7 +546,7 @@ export default function Backoffice() {
                                 onClick={() => {
                                     setSettings({
                                         ...settings, 
-                                        hero_slides: [...(settings.hero_slides||[]), { title: '', subtitle: '', desc: '', img: '', color: 'bg-[#0f4c3a]', textColor: 'text-white', buttonColor: 'bg-white text-black' }]
+                                        hero_slides: [...(settings.hero_slides||[]), { title: '', subtitle: '', desc: '', img: '', color: '#0f4c3a', textColor: '#ffffff', buttonColor: 'bg-white text-black' }]
                                     });
                                 }}
                                 className="w-full py-4 border border-dashed border-gray-300 rounded-2xl font-bold text-xs uppercase text-gray-400 hover:text-black hover:border-gray-900 transition-all flex items-center justify-center gap-2"
@@ -593,9 +604,14 @@ export default function Backoffice() {
                                         <input placeholder="Nombre del Producto" className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold outline-none focus:border-black" value={item.name} onChange={e => {
                                             const ng = [...settings.trending_gallery]; ng[idx].name = e.target.value; setSettings({...settings, trending_gallery: ng});
                                         }} />
-                                        <input placeholder="Color Fondo (bg-gray-100)" className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-[10px] font-mono outline-none focus:border-black" value={item.color || ''} onChange={e => {
-                                            const ng = [...settings.trending_gallery]; ng[idx].color = e.target.value; setSettings({...settings, trending_gallery: ng});
-                                        }} />
+                                        <div className="flex items-center gap-2">
+                                            <input type="color" className="w-8 h-8 rounded cursor-pointer border-0 p-0" value={item.color?.startsWith('#') ? item.color : '#f3f4f6'} onChange={e => {
+                                                const ng = [...settings.trending_gallery]; ng[idx].color = e.target.value; setSettings({...settings, trending_gallery: ng});
+                                            }} />
+                                            <input placeholder="Fondo (#f3f4f6)" className="flex-1 p-2.5 bg-white border border-gray-200 rounded-lg text-[10px] font-mono outline-none focus:border-black" value={item.color || ''} onChange={e => {
+                                                const ng = [...settings.trending_gallery]; ng[idx].color = e.target.value; setSettings({...settings, trending_gallery: ng});
+                                            }} />
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -715,14 +731,18 @@ export default function Backoffice() {
                                     <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4 ml-1">Imagen Principal</label>
                                     <div className="aspect-square bg-gray-50 rounded-3xl border border-gray-100 flex flex-col items-center justify-center relative overflow-hidden group shadow-inner">
                                         {currentProduct.imagen_url ? (
-                                            <img src={currentProduct.imagen_url} className="w-full h-full object-contain mix-blend-multiply p-8 group-hover:scale-105 transition-transform duration-500" alt="" />
+                                            isVideo(currentProduct.imagen_url) ? (
+                                                <video src={currentProduct.imagen_url} autoPlay loop muted playsInline className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500" />
+                                            ) : (
+                                                <img src={currentProduct.imagen_url} className="w-full h-full object-contain mix-blend-multiply p-8 group-hover:scale-105 transition-transform duration-500" alt="" />
+                                            )
                                         ) : (
                                             <ImagePlus className="text-gray-200" size={64} />
                                         )}
                                         <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all cursor-pointer flex flex-col items-center justify-center text-white p-6 text-center">
                                             <RefreshCw size={28} className="mb-3" />
                                             <span className="font-bold text-[10px] uppercase tracking-[0.2em]">Subir Foto</span>
-                                            <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={formLoading} />
+                                            <input type="file" className="hidden" accept="image/*,video/*" onChange={handleImageUpload} disabled={formLoading} />
                                         </label>
                                     </div>
                                 </div>
@@ -732,7 +752,11 @@ export default function Backoffice() {
                                     <div className="grid grid-cols-3 gap-3">
                                         {(currentProduct.galeria || []).map((img, i) => (
                                             <div key={i} className="aspect-square rounded-2xl border border-gray-100 relative group bg-gray-50 overflow-hidden">
-                                                <img src={img} className="w-full h-full object-cover mix-blend-multiply p-1" alt=""/>
+                                                {isVideo(img) ? (
+                                                    <video src={img} autoPlay loop muted playsInline className="w-full h-full object-cover p-1" />
+                                                ) : (
+                                                    <img src={img} className="w-full h-full object-cover mix-blend-multiply p-1" alt=""/>
+                                                )}
                                                 <button type="button" onClick={() => removeGalleryImage(i)} className="absolute top-2 right-2 bg-black/80 text-white w-6 h-6 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <X size={12}/>
                                                 </button>
@@ -740,7 +764,7 @@ export default function Backoffice() {
                                         ))}
                                         <label className="aspect-square rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 hover:border-black transition-all group/add">
                                             <Plus className="text-gray-300 group-hover/add:text-black" />
-                                            <input type="file" multiple className="hidden" accept="image/*" onChange={handleGalleryUpload} disabled={formLoading} />
+                                            <input type="file" multiple className="hidden" accept="image/*,video/*" onChange={handleGalleryUpload} disabled={formLoading} />
                                         </label>
                                     </div>
                                 </div>

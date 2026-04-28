@@ -8,8 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // --- UTILS ---
 const formatPrice = (price) => `S/. ${(price || 0).toLocaleString('es-PE')}`;
-
-
+const isVideo = (url) => url && url.match(/\.(mp4|webm|ogg|mov)$/i);
 
 // --- COMPONENTS ---
 
@@ -149,7 +148,10 @@ const HeroSlider = ({ customSlides }) => {
                     key={idx}
                     className={`absolute inset-0 grid grid-cols-1 lg:grid-cols-2 transition-opacity duration-1000 ease-in-out ${idx === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                 >
-                    <div className={`relative flex flex-col justify-center px-8 lg:px-24 ${slide.color} ${slide.textColor} z-10 transition-colors duration-1000`}>
+                    <div 
+                        className={`relative flex flex-col justify-center px-8 lg:px-24 z-10 transition-colors duration-1000 ${!slide.color?.startsWith('#') ? slide.color : ''} ${!slide.textColor?.startsWith('#') ? slide.textColor : ''}`}
+                        style={{ backgroundColor: slide.color?.startsWith('#') ? slide.color : undefined, color: slide.textColor?.startsWith('#') ? slide.textColor : undefined }}
+                    >
                         <span className="text-xs font-semibold tracking-widest opacity-80 mb-4 uppercase">
                             {slide.subtitle}
                         </span>
@@ -213,7 +215,10 @@ const TrendingGallery = ({ customGallery }) => {
             <div className="relative w-full flex gap-4 overflow-x-auto no-scrollbar px-4 sm:px-8 pb-4 snap-x">
                 {(customGallery && customGallery.length > 0 ? customGallery : defaultItems).map((item, i) => (
                     <div key={i} className="min-w-[280px] sm:min-w-[320px] group cursor-pointer snap-start">
-                        <div className={`aspect-[4/5] ${item.color} rounded-xl overflow-hidden mb-4 relative`}>
+                        <div 
+                            className={`aspect-[4/5] rounded-xl overflow-hidden mb-4 relative ${!item.color?.startsWith('#') ? item.color : ''}`}
+                            style={{ backgroundColor: item.color?.startsWith('#') ? item.color : undefined }}
+                        >
                             <img src={item.img} alt={item.name} className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-700" />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300"></div>
                         </div>
@@ -261,12 +266,20 @@ const ProductCard = React.memo(({ product, onAddToCart }) => {
             </span>
         </div>
       )}
-      <img
-        src={product.imagen_url || 'https://via.placeholder.com/400?text=No+Image'}
-        alt={product.nombre}
-        loading="lazy"
-        className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out mix-blend-multiply"
-      />
+      {isVideo(product.imagen_url) ? (
+        <video
+          src={product.imagen_url}
+          autoPlay loop muted playsInline
+          className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out"
+        />
+      ) : (
+        <img
+          src={product.imagen_url || 'https://via.placeholder.com/400?text=No+Image'}
+          alt={product.nombre}
+          loading="lazy"
+          className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out mix-blend-multiply"
+        />
+      )}
     </Link>
     <div className="p-4 flex-1 flex flex-col justify-between">
       <div>
