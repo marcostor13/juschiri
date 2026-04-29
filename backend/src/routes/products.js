@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const connectDB = require('../db');
 const Product = require('../models/Product');
+const auth = require('../middleware/auth');
 
 // GET /api/products
 router.get('/', async (req, res) => {
@@ -106,6 +107,17 @@ router.put('/:codigo', async (req, res) => {
     res.json(product);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// DELETE /api/products/zero-stock — must be before /:codigo
+router.delete('/zero-stock', auth, async (req, res) => {
+  try {
+    await connectDB();
+    const result = await Product.deleteMany({ stock_actual: 0 });
+    res.json({ deleted: result.deletedCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

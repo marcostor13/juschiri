@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  RefreshCw, Plus, Edit, Trash2, Search, X, Save, ImagePlus, Check, 
-  SlidersHorizontal, Loader2, ArrowLeft, ArrowRight, LayoutDashboard, 
-  Package, ShoppingCart, LogOut, Menu, User as UserIcon, Settings
+import {
+  RefreshCw, Plus, Edit, Trash2, Search, X, Save, ImagePlus, Check,
+  SlidersHorizontal, Loader2, ArrowLeft, ArrowRight, LayoutDashboard,
+  Package, ShoppingCart, LogOut, Menu, User as UserIcon, Settings,
+  Tag, Database, Download
 } from 'lucide-react';
 import { ConfirmModal, Notification } from '../components/ui';
 
 // Components
 import Dashboard from './Dashboard';
 import SalesList from './SalesList';
+import CategoriesManager from './CategoriesManager';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -166,6 +168,63 @@ export default function Backoffice() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
 
+  // Backup & tools state
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupHistory, setBackupHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('juschiri_backup_history') || '[]'); } catch { return []; }
+  });
+  const [showDeleteZeroConfirm, setShowDeleteZeroConfirm] = useState(false);
+
+  const createBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/backup`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { showNotification('Error al crear backup', 'error'); setBackupLoading(false); return; }
+      const data = await res.json();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filename = `juschiri-backup-${timestamp}.json`;
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      const record = { id: Date.now(), filename, createdAt: new Date().toISOString(), counts: data.counts };
+      const next = [record, ...backupHistory];
+      setBackupHistory(next);
+      localStorage.setItem('juschiri_backup_history', JSON.stringify(next));
+      showNotification('Backup creado y descargado', 'success');
+    } catch (e) { showNotification('Error al crear backup', 'error'); }
+    setBackupLoading(false);
+  };
+
+  const deleteBackupRecord = (id) => {
+    const next = backupHistory.filter(b => b.id !== id);
+    setBackupHistory(next);
+    localStorage.setItem('juschiri_backup_history', JSON.stringify(next));
+  };
+
+  const executeDeleteZeroStock = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/products/zero-stock`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const { deleted } = await res.json();
+        showNotification(`${deleted} productos eliminados`, 'success');
+        await fetchProducts();
+      } else {
+        showNotification('Error al eliminar productos', 'error');
+      }
+    } catch (e) { showNotification('Error de conexión', 'error'); }
+    setShowDeleteZeroConfirm(false);
+  };
+
   const [allCategories, setAllCategories] = useState([]);
   const fetchProducts = async () => {
     setLoading(true);
@@ -310,27 +369,30 @@ export default function Backoffice() {
       });
   };
 
+  const sumVariantStock = (variants) =>
+    variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+
   const addVariant = () => {
-      setCurrentProduct(prev => ({
-          ...prev,
-          variantes: [...(prev.variantes || []), { talla: '', color: '', stock: 0 }]
-      }));
+    setCurrentProduct(prev => {
+      const newVar = [...(prev.variantes || []), { talla: '', color: '', stock: 0 }];
+      return { ...prev, variantes: newVar, stock_actual: sumVariantStock(newVar) };
+    });
   };
 
   const updateVariant = (index, field, value) => {
-      setCurrentProduct(prev => {
-          const newVar = [...prev.variantes];
-          newVar[index][field] = value;
-          return { ...prev, variantes: newVar };
-      });
+    setCurrentProduct(prev => {
+      const newVar = prev.variantes.map((v, i) =>
+        i === index ? { ...v, [field]: field === 'stock' ? Number(value) : value } : v
+      );
+      return { ...prev, variantes: newVar, stock_actual: sumVariantStock(newVar) };
+    });
   };
 
   const removeVariant = (index) => {
-      setCurrentProduct(prev => {
-          const newVar = [...prev.variantes];
-          newVar.splice(index, 1);
-          return { ...prev, variantes: newVar };
-      });
+    setCurrentProduct(prev => {
+      const newVar = prev.variantes.filter((_, i) => i !== index);
+      return { ...prev, variantes: newVar, stock_actual: sumVariantStock(newVar) };
+    });
   };
 
   const executeDelete = async () => {
@@ -382,11 +444,13 @@ export default function Backoffice() {
                 <SidebarItem id="dashboard" label="Vista General" icon={LayoutDashboard} />
                 <SidebarItem id="inventory" label="Inventario" icon={Package} />
                 <SidebarItem id="sales" label="Ventas & Leads" icon={ShoppingCart} />
-                
+                <SidebarItem id="categories" label="Categorías" icon={Tag} />
+
                 <div className="mt-10 mb-2 px-4">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sistema</span>
                 </div>
                 <SidebarItem id="settings" label="Configuración" icon={Settings} />
+                <SidebarItem id="tools" label="Herramientas" icon={Database} />
             </nav>
 
             <div className="p-4 border-t border-gray-100">
@@ -413,9 +477,15 @@ export default function Backoffice() {
         <main className="flex-1 ml-72 p-10 lg:p-14 min-h-screen">
             <header className="mb-12 flex justify-between items-center">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 capitalize">{activeTab === 'inventory' ? 'Inventario' : activeTab}</h2>
+                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 capitalize">
+                      {activeTab === 'inventory' ? 'Inventario' : activeTab === 'categories' ? 'Categorías' : activeTab === 'tools' ? 'Herramientas' : activeTab === 'dashboard' ? 'Vista General' : activeTab === 'sales' ? 'Ventas & Leads' : 'Configuración'}
+                    </h2>
                     <p className="text-sm text-gray-500 mt-1.5 font-medium">
-                        {activeTab === 'inventory' ? 'Gestiona tus productos, stock y precios.' : activeTab === 'dashboard' ? 'Resumen general de tu negocio.' : 'Configura los parámetros del sitio.'}
+                        {activeTab === 'inventory' ? 'Gestiona tus productos, stock y precios.'
+                          : activeTab === 'dashboard' ? 'Resumen general de tu negocio.'
+                          : activeTab === 'categories' ? 'Administra categorías, tipos y subcategorías.'
+                          : activeTab === 'tools' ? 'Backups y mantenimiento de la base de datos.'
+                          : 'Configura los parámetros del sitio.'}
                     </p>
                 </div>
                 {activeTab === 'inventory' && (
@@ -432,8 +502,88 @@ export default function Backoffice() {
 
             {/* TAB CONTENT */}
             {activeTab === 'dashboard' && <Dashboard />}
-            
+
             {activeTab === 'sales' && <SalesList />}
+
+            {activeTab === 'categories' && (
+              <CategoriesManager showNotification={showNotification} />
+            )}
+
+            {activeTab === 'tools' && (
+              <div className="space-y-8 pb-20 animate-fade-in">
+                {/* Backup */}
+                <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+                  <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-5">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Backup de Base de Datos</h3>
+                      <p className="text-sm text-gray-400 mt-1">Descarga una copia completa de productos, categorías y ventas.</p>
+                    </div>
+                    <button
+                      onClick={createBackup}
+                      disabled={backupLoading}
+                      className="flex items-center gap-2 bg-black text-white font-bold px-6 py-2.5 rounded-xl text-sm hover:bg-gray-800 transition-all shadow-lg shadow-black/10 disabled:opacity-50"
+                    >
+                      {backupLoading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                      Crear Backup
+                    </button>
+                  </div>
+
+                  {backupHistory.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic py-10 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      No hay backups registrados en este dispositivo.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {backupHistory.map(b => (
+                        <div key={b.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl group">
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 font-mono">{b.filename}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5 font-mono uppercase tracking-wider">
+                              {new Date(b.createdAt).toLocaleString('es-PE')}
+                              {b.counts && ` · ${b.counts.products} productos · ${b.counts.sales} ventas`}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => deleteBackupRecord(b.id)}
+                            className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Zero-stock cleanup */}
+                <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Limpieza de Inventario</h3>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Elimina permanentemente todos los productos con stock 0.
+                      </p>
+                      <p className="text-2xl font-black font-mono mt-4 text-gray-900">
+                        {loading ? '...' : products.filter(p => p.stock_actual === 0).length}
+                        <span className="text-sm font-normal text-gray-400 ml-2">productos con stock 0</span>
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowDeleteZeroConfirm(true)}
+                      disabled={products.filter(p => p.stock_actual === 0).length === 0 || loading}
+                      className="flex items-center gap-2 bg-red-600 text-white font-bold px-6 py-2.5 rounded-xl text-sm hover:bg-red-700 transition-all disabled:opacity-40"
+                    >
+                      <Trash2 size={16} /> Eliminar Sin Stock
+                    </button>
+                  </div>
+                  <div className="mt-6 p-4 bg-red-50 rounded-xl border border-red-100">
+                    <p className="text-xs text-red-500 font-medium">
+                      Esta acción es irreversible. Se eliminarán todos los productos con <span className="font-bold">stock_actual = 0</span> de la base de datos. Crea un backup antes de proceder.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {activeTab === 'settings' && (
                 <div className="space-y-8 pb-20">
@@ -910,7 +1060,16 @@ export default function Backoffice() {
             </div>
         )}
 
-        <ConfirmModal 
+        <ConfirmModal
+            isOpen={showDeleteZeroConfirm}
+            title="Eliminar productos sin stock"
+            message={`¿Eliminar ${products.filter(p => p.stock_actual === 0).length} productos con stock 0? Esta acción es irreversible.`}
+            confirmText="Sí, Eliminar"
+            onConfirm={executeDeleteZeroStock}
+            onCancel={() => setShowDeleteZeroConfirm(false)}
+        />
+
+        <ConfirmModal
             isOpen={itemToDelete !== null}
             title="Eliminar Producto"
             message={`¿Estás seguro de eliminar el producto ${itemToDelete}? Esta acción es irreversible.`}
