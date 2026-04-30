@@ -145,31 +145,14 @@ const HeroSlider = ({ customSlides }) => {
     }, [slides.length]);
 
     return (
-        <div className="relative overflow-hidden group bg-gray-50 border-b border-gray-200 h-[70vh]">
+        <div className="relative overflow-hidden bg-gray-900 border-b border-gray-200 h-[85vh] lg:h-[70vh]">
             {slides.map((slide, idx) => (
-                <div 
+                <div
                     key={idx}
-                    className={`absolute inset-0 grid grid-cols-1 lg:grid-cols-2 transition-opacity duration-1000 ease-in-out ${idx === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                    className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                 >
-                    <div 
-                        className={`relative flex flex-col justify-center px-8 lg:px-24 z-10 transition-colors duration-1000 ${!slide.color?.startsWith('#') ? slide.color : ''} ${!slide.textColor?.startsWith('#') ? slide.textColor : ''}`}
-                        style={{ backgroundColor: slide.color?.startsWith('#') ? slide.color : undefined, color: slide.textColor?.startsWith('#') ? slide.textColor : undefined }}
-                    >
-                        <span className="text-xs font-semibold tracking-widest opacity-80 mb-4 uppercase">
-                            {slide.subtitle}
-                        </span>
-                        <h1 className="text-5xl sm:text-7xl font-bold leading-tight tracking-tight mb-6">
-                            {slide.title}
-                        </h1>
-                        <p className="opacity-90 mb-8 max-w-md text-lg">
-                            {slide.desc}
-                        </p>
-                        <a href="#shop" className={`w-full sm:w-max font-medium text-sm px-10 py-4 uppercase tracking-wider transition-colors text-center rounded-md ${slide.buttonColor}`}>
-                            Explorar Catálogo
-                        </a>
-                    </div>
-                    <div className="relative h-full overflow-hidden hidden lg:block">
-                        <div className="absolute inset-0 bg-black/10 z-10"></div>
+                    {/* MOBILE: imagen full-bleed con gradiente y texto superpuesto */}
+                    <div className="lg:hidden absolute inset-0 overflow-hidden">
                         <img
                             className={`absolute inset-0 w-full h-full object-cover transition-transform duration-[10000ms] ease-out ${idx === current ? 'scale-110' : 'scale-100'}`}
                             src={slide.img}
@@ -178,15 +161,65 @@ const HeroSlider = ({ customSlides }) => {
                             fetchpriority={idx === 0 ? "high" : "auto"}
                             decoding="async"
                         />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10" />
+                    </div>
+                    <div className="lg:hidden absolute inset-0 flex flex-col justify-end px-6 sm:px-10 pb-20 z-10 text-white">
+                        <span className="text-[10px] font-bold tracking-[0.3em] uppercase opacity-70 mb-3">
+                            {slide.subtitle}
+                        </span>
+                        <h1 className="text-4xl sm:text-5xl font-black uppercase leading-[0.9] tracking-tighter mb-4">
+                            {slide.title}
+                        </h1>
+                        <p className="opacity-75 mb-8 text-sm sm:text-base leading-relaxed max-w-sm">
+                            {slide.desc}
+                        </p>
+                        <a
+                            href="#shop"
+                            className="w-full sm:w-max bg-black text-white border-2 border-black font-bold uppercase tracking-wider text-sm px-10 py-4 hover:bg-[#CCFF00] hover:text-black hover:border-[#CCFF00] transition-colors text-center"
+                        >
+                            Explorar Catálogo
+                        </a>
+                    </div>
+
+                    {/* DESKTOP: layout 2 columnas original */}
+                    <div className="hidden lg:grid lg:grid-cols-2 h-full">
+                        <div
+                            className={`relative flex flex-col justify-center px-24 z-10 transition-colors duration-1000 ${!slide.color?.startsWith('#') ? slide.color : ''} ${!slide.textColor?.startsWith('#') ? slide.textColor : ''}`}
+                            style={{ backgroundColor: slide.color?.startsWith('#') ? slide.color : undefined, color: slide.textColor?.startsWith('#') ? slide.textColor : undefined }}
+                        >
+                            <span className="text-xs font-semibold tracking-widest opacity-80 mb-4 uppercase">
+                                {slide.subtitle}
+                            </span>
+                            <h1 className="text-5xl xl:text-7xl font-bold leading-tight tracking-tight mb-6">
+                                {slide.title}
+                            </h1>
+                            <p className="opacity-90 mb-8 max-w-md text-lg">
+                                {slide.desc}
+                            </p>
+                            <a href="#shop" className={`w-max font-medium text-sm px-10 py-4 uppercase tracking-wider transition-colors text-center rounded-md ${slide.buttonColor}`}>
+                                Explorar Catálogo
+                            </a>
+                        </div>
+                        <div className="relative h-full overflow-hidden">
+                            <div className="absolute inset-0 bg-black/10 z-10" />
+                            <img
+                                className={`absolute inset-0 w-full h-full object-cover transition-transform duration-[10000ms] ease-out ${idx === current ? 'scale-110' : 'scale-100'}`}
+                                src={slide.img}
+                                alt={slide.title}
+                                loading={idx === 0 ? "eager" : "lazy"}
+                                fetchpriority={idx === 0 ? "high" : "auto"}
+                                decoding="async"
+                            />
+                        </div>
                     </div>
                 </div>
             ))}
-            
+
             {/* Slider Controls */}
-            <div className="absolute bottom-8 left-8 lg:left-24 z-20 flex gap-3">
+            <div className="absolute bottom-8 left-6 sm:left-8 lg:left-24 z-20 flex gap-3">
                 {slides.map((_, idx) => (
-                    <button 
-                        key={idx} 
+                    <button
+                        key={idx}
                         onClick={() => setCurrent(idx)}
                         className={`h-1.5 rounded-full transition-all duration-500 ${idx === current ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}`}
                         title={`Ir a diapositiva ${idx + 1}`}

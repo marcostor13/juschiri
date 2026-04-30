@@ -1,0 +1,82 @@
+[
+  {
+    "excelRow": 3,
+    "codigo": "00001726",
+    "nombre": "Palm Angels Foggy PA T-Shirt Black/White",
+    "marca": "Palm Angels",
+    "precio": 1399,
+    "imagen_url": "https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00001726.png"
+  },
+  {
+    "excelRow": 4,
+    "codigo": "00001732",
+    "nombre": "Palm Angels Men's Neck Logo",
+    "marca": "Palm Angels",
+    "precio": 1399,
+    "imagen_url": "https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00001732.png"
+  },
+  {
+    "excelRow": 5,
+    "codigo": "00001737",
+    "nombre": "Palm Angels Teddy Bear Print Cotton T-shirt Cream",
+    "marca": "Palm Angels",
+    "precio": 1399,
+    "imagen_url": "https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00001737.png"
+  },
+  {
+    "excelRow": 6,
+    "codigo": "00001756",
+    "nombre": "Palm Angels Men's College Black",
+    "marca": "Palm Angels",
+    "precio": 1399,
+    "imagen_url": "https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00001756.png"
+  },
+  {
+    "excelRow": 7,
+    "codigo": "00001762",
+    "nombre": "Palm Angels Neck Logo T-Shirt Black",
+    "marca": "Palm Angels",
+    "precio": 1399,
+    "imagen_url": "https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00001762.jpg"
+  },
+  {
+    "excelRow": 8,
+    "codigo": "00001767",
+    "nombre": "Back curved logo over tee white",
+    "marca": "Palm Angels",
+    "precio": 1399,
+    "imagen_url": "https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00001767.png"
+  },
+  {
+    "excelRow": 9,
+    "codigo": "00001782",
+    "nombre": "Palm Angels Paradise Palm T-shirt Yellow",
+    "marca": "Palm Angels",
+    "precio": 1399,
+    "imagen_url": "https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00001782.png"
+  },
+  {
+    "excelRow": 10,
+    "codigo": "00001787",
+    "nombre": "The Palm Back T-Shirt Black",
+    "marca": "Palm Angels",
+    "precio": 1399,
+    "imagen_url": "https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00001787.png"
+  },
+  {
+    "excelRow": 11,
+    "codigo": "00001796",
+    "nombre": "Palm Angels x Haas MoneyGram F1 Team Monza T-Shirt TeeRed",
+    "marca": "Palm Angels",
+    "precio": 1399,
+    "imagen_url": "https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00001796.png"
+  },
+  {
+    "excelRow": 12,
+    "codigo": "00001807",
+    "nombre": "Dollar-print Oversized T-shirt in Cotton Cream",
+    "marca": "Palm Angels",
+    "precio": 1399,
+    "imagen_url": "https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00001807.png"
+  }
+]
