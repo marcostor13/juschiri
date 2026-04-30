@@ -15,7 +15,8 @@
       "Bash(node -e ' *)",
       "Bash(powershell -Command \"Expand-Archive -Path 'public/MODELOS DE PRENDAS orden \\(1\\).xlsx' -DestinationPath 'temp_xlsx_extract' -Force\")",
       "Bash(powershell -Command \"Expand-Archive -Path 'C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\\\\temp_modelos.zip' -DestinationPath 'C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\\\\temp_xlsx_extract' -Force\")",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(grep -E \"\\\\.\\(xlsx|json|js\\)$\")"
     ]
   }
 }

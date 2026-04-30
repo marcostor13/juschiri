@@ -15,9 +15,11 @@ const ProductSchema = new mongoose.Schema(
     descuento:      { type: Number, default: 0, min: 0, max: 100 },
     galeria:        [{ type: String }],
     variantes:      [{
-      talla: String,
-      color: String,
-      stock: { type: Number, default: 0, min: 0 }
+      talla:     String,
+      talla_eur: String,
+      talla_us:  String,
+      color:     String,
+      stock:     { type: Number, default: 0, min: 0 }
     }],
   },
   { timestamps: true }

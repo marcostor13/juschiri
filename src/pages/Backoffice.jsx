@@ -374,7 +374,7 @@ export default function Backoffice() {
 
   const addVariant = () => {
     setCurrentProduct(prev => {
-      const newVar = [...(prev.variantes || []), { talla: '', color: '', stock: 0 }];
+      const newVar = [...(prev.variantes || []), { talla: '', talla_eur: '', talla_us: '', color: '', stock: 0 }];
       return { ...prev, variantes: newVar, stock_actual: sumVariantStock(newVar) };
     });
   };
@@ -1035,11 +1035,22 @@ export default function Backoffice() {
                                     
                                     <div className="space-y-2">
                                         {(currentProduct.variantes || []).map((v, i) => (
-                                            <div key={i} className="flex gap-2 items-center bg-white p-3 rounded-2xl border border-gray-100 shadow-sm animate-fade-in-up">
-                                                <input type="text" placeholder="Talla" className="w-1/3 p-3 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none" value={v.talla || ''} onChange={e => updateVariant(i, 'talla', e.target.value)} />
-                                                <input type="text" placeholder="Color" className="w-1/3 p-3 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none" value={v.color || ''} onChange={e => updateVariant(i, 'color', e.target.value)} />
-                                                <input type="number" placeholder="Stock" className="w-1/4 p-3 bg-gray-50 rounded-xl font-bold text-xs outline-none" value={v.stock} onChange={e => updateVariant(i, 'stock', Number(e.target.value))} />
-                                                <button type="button" onClick={() => removeVariant(i)} className="p-3 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"><Trash2 size={16}/></button>
+                                            <div key={i} className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm animate-fade-in-up space-y-2">
+                                                <div className="flex gap-2">
+                                                    <div className="flex-1 relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-gray-400 uppercase pointer-events-none">EUR</span>
+                                                        <input type="text" placeholder="42" className="w-full pl-9 pr-2 py-2.5 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none focus:ring-2 focus:ring-black/10" value={v.talla_eur || v.talla || ''} onChange={e => updateVariant(i, 'talla_eur', e.target.value)} />
+                                                    </div>
+                                                    <div className="flex-1 relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-gray-400 uppercase pointer-events-none">US</span>
+                                                        <input type="text" placeholder="8.5" className="w-full pl-8 pr-2 py-2.5 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none focus:ring-2 focus:ring-black/10" value={v.talla_us || ''} onChange={e => updateVariant(i, 'talla_us', e.target.value)} />
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2 items-center">
+                                                    <input type="text" placeholder="Color" className="flex-1 p-2.5 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none focus:ring-2 focus:ring-black/10" value={v.color || ''} onChange={e => updateVariant(i, 'color', e.target.value)} />
+                                                    <input type="number" placeholder="Stock" min="0" className="w-20 p-2.5 bg-gray-50 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-black/10" value={v.stock} onChange={e => updateVariant(i, 'stock', Number(e.target.value))} />
+                                                    <button type="button" onClick={() => removeVariant(i)} className="p-2.5 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"><Trash2 size={14}/></button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

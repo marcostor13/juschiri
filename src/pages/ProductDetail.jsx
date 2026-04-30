@@ -18,6 +18,7 @@ export default function ProductDetail() {
   // Variantes
   const [selectedTalla, setSelectedTalla] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
+  const [sizeSystem, setSizeSystem] = useState('EUR');
   
   const addToCartAction = useCartStore(state => state.addToCart);
 
@@ -50,6 +51,7 @@ export default function ProductDetail() {
     // reset state
     setSelectedTalla('');
     setSelectedColor('');
+    setSizeSystem('EUR');
     fetchProduct();
     window.scrollTo(0,0);
   }, [id]);
@@ -73,28 +75,47 @@ export default function ProductDetail() {
 
   const galeria = [product.imagen_url, ...(product.galeria || [])].filter(Boolean);
   const hasVariants = product.variantes && product.variantes.length > 0;
-  
-  // Extraer tallas y colores únicos
-  const tallas = hasVariants ? [...new Set(product.variantes.map(v => v.talla).filter(Boolean))] : [];
+
+  // Extraer tallas por sistema y detectar si hay doble sistema EUR/US
+  const tallasEur = hasVariants
+    ? [...new Set(product.variantes.map(v => v.talla_eur || v.talla).filter(Boolean))]
+    : [];
+  const tallasUs = hasVariants
+    ? [...new Set(product.variantes.map(v => v.talla_us).filter(Boolean))]
+    : [];
+  const hasDualSizes = tallasEur.length > 0 && tallasUs.length > 0;
+  const tallas = hasDualSizes
+    ? (sizeSystem === 'EUR' ? tallasEur : tallasUs)
+    : tallasEur;
   const colores = hasVariants ? [...new Set(product.variantes.map(v => v.color).filter(Boolean))] : [];
+
+  const handleSizeSystemChange = (system) => {
+    setSizeSystem(system);
+    setSelectedTalla('');
+  };
 
   const handleAddToCart = () => {
       if (hasVariants) {
           if (tallas.length > 0 && !selectedTalla) return alert("Por favor selecciona una talla");
           if (colores.length > 0 && !selectedColor) return alert("Por favor selecciona un color");
       }
-      
+
       const finalPrice = product.descuento > 0 ? product.precio * (1 - product.descuento / 100) : product.precio;
       const item = { ...product, precio: finalPrice, precio_original: product.precio };
       if (hasVariants) {
           item.talla = selectedTalla;
           item.color = selectedColor;
-          // ID único para el carrito basado en la variante para no juntar tallas distintas
-          item.cartId = `${product._id}-${selectedTalla}-${selectedColor}`;
+          if (hasDualSizes) {
+            const v = product.variantes.find(v => {
+              const vs = sizeSystem === 'EUR' ? (v.talla_eur || v.talla) : v.talla_us;
+              return vs === selectedTalla && (!selectedColor || v.color === selectedColor);
+            });
+            if (v) { item.talla_eur = v.talla_eur || v.talla; item.talla_us = v.talla_us; }
+          }
+          item.cartId = `${product._id}-${sizeSystem}-${selectedTalla}-${selectedColor}`;
       } else {
           item.cartId = product._id;
       }
-      
       addToCartAction(item);
   };
 
@@ -166,10 +187,26 @@ export default function ProductDetail() {
                 <div className="space-y-8 border-t border-gray-100 pt-8 animate-fade-in-up" style={{animationDelay: '100ms'}}>
                     {tallas.length > 0 && (
                         <div className="space-y-3">
-                            <p className="text-sm font-medium text-gray-900">Seleccionar Talla</p>
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium text-gray-900">Seleccionar Talla</p>
+                                {hasDualSizes && (
+                                    <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
+                                        {['EUR', 'US'].map(sys => (
+                                            <button
+                                                key={sys}
+                                                type="button"
+                                                onClick={() => handleSizeSystemChange(sys)}
+                                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${sizeSystem === sys ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-black'}`}
+                                            >
+                                                {sys}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                             <div className="flex flex-wrap gap-3">
                                 {tallas.map(t => (
-                                    <button 
+                                    <button
                                         key={t}
                                         onClick={() => setSelectedTalla(t)}
                                         className={`min-w-[3.5rem] h-12 px-4 flex items-center justify-center text-sm font-medium rounded-md border transition-all ${selectedTalla === t ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-700 hover:border-black'}`}
@@ -178,6 +215,18 @@ export default function ProductDetail() {
                                     </button>
                                 ))}
                             </div>
+                            {hasDualSizes && selectedTalla && (() => {
+                                const v = product.variantes.find(v => {
+                                    const vs = sizeSystem === 'EUR' ? (v.talla_eur || v.talla) : v.talla_us;
+                                    return vs === selectedTalla;
+                                });
+                                const other = v ? (sizeSystem === 'EUR' ? v.talla_us : (v.talla_eur || v.talla)) : null;
+                                return other ? (
+                                    <p className="text-xs text-gray-400">
+                                        = {sizeSystem === 'EUR' ? 'US' : 'EUR'} {other}
+                                    </p>
+                                ) : null;
+                            })()}
                         </div>
                     )}
 
