@@ -10,6 +10,8 @@ const ProductSchema = new mongoose.Schema(
     category:       { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
     type:           { type: mongoose.Schema.Types.ObjectId, ref: 'Type', default: null },
     subcategory:    { type: mongoose.Schema.Types.ObjectId, ref: 'Subcategory', default: null },
+    subsubcategory: { type: mongoose.Schema.Types.ObjectId, ref: 'SubSubcategory', default: null },
+    designer:       { type: mongoose.Schema.Types.ObjectId, ref: 'Designer', default: null },
     marca:          { type: String, trim: true },
     precio:         { type: Number, required: true, min: 0 },
     descuento:      { type: Number, default: 0, min: 0, max: 100 },

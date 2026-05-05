@@ -7,12 +7,14 @@ const auth = require('../middleware/auth');
 router.get('/', async (req, res) => {
   try {
     await connectDB();
-    const { category, type, subcategory, marca, search, sort, page = 1, limit = 20 } = req.query;
+    const { category, type, subcategory, subsubcategory, designer, marca, search, sort, page = 1, limit = 20 } = req.query;
 
     const filter = {};
     if (category) filter.category = category;
     if (type) filter.type = type;
     if (subcategory) filter.subcategory = subcategory;
+    if (subsubcategory) filter.subsubcategory = subsubcategory;
+    if (designer) filter.designer = designer;
     if (marca) filter.marca = new RegExp(marca, 'i');
     if (search) filter.$text = { $search: search };
 
@@ -28,6 +30,8 @@ router.get('/', async (req, res) => {
         .populate('category')
         .populate('type')
         .populate('subcategory')
+        .populate('subsubcategory')
+        .populate('designer')
         .sort(sortOption)
         .skip(skip)
         .limit(Number(limit))

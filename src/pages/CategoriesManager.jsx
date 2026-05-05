@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Check, X, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Check, X, Loader2, RefreshCw, Link as LinkIcon } from 'lucide-react';
 import { ConfirmModal } from '../components/ui';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 const token = () => localStorage.getItem('token');
+const authHeaders = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` });
 
 // ── Inline editable row ──────────────────────────────────────────────────────
 
@@ -28,8 +29,6 @@ function EditableRow({ name, onSave, onCancel }) {
   );
 }
 
-// ── Inline add row ───────────────────────────────────────────────────────────
-
 function AddRow({ placeholder, onSave, onCancel }) {
   const [value, setValue] = useState('');
   return (
@@ -52,50 +51,82 @@ function AddRow({ placeholder, onSave, onCancel }) {
   );
 }
 
+// ── Assign designer modal ────────────────────────────────────────────────────
+
+function AssignDesignerModal({ category, designers, onSave, onClose }) {
+  const [selected, setSelected] = useState(category.designer?._id || category.designer || '');
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl border border-gray-200 p-6 w-80 shadow-2xl">
+        <h3 className="text-sm font-bold uppercase tracking-wider mb-4">Asignar Diseñador</h3>
+        <p className="text-xs text-gray-500 mb-4">Categoría: <span className="font-bold text-gray-900">{category.name}</span></p>
+        <select
+          value={selected}
+          onChange={e => setSelected(e.target.value)}
+          className="w-full px-3 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm outline-none focus:border-black transition-colors mb-5"
+        >
+          <option value="">Sin diseñador</option>
+          {designers.map(d => (
+            <option key={d._id} value={d._id}>{d.name}</option>
+          ))}
+        </select>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2 text-sm font-bold border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Cancelar</button>
+          <button onClick={() => onSave(selected || null)} className="flex-1 py-2 text-sm font-bold bg-black text-white rounded-xl hover:bg-gray-800 transition-colors">Guardar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 export default function CategoriesManager({ showNotification }) {
+  const [designers, setDesigners] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [view, setView] = useState('tree');
+
+  // Expand state per level
+  const [expandedDesigners, setExpandedDesigners] = useState({});
   const [expandedCats, setExpandedCats] = useState({});
   const [expandedTypes, setExpandedTypes] = useState({});
+  const [expandedSubs, setExpandedSubs] = useState({});
 
-  // Editing state: { id, level: 'category'|'type'|'subcategory' }
+  // Editing / Adding / Deleting
   const [editing, setEditing] = useState(null);
-
-  // Adding state: { level, parentId, categoryId? }
   const [adding, setAdding] = useState(null);
-
-  // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [assignTarget, setAssignTarget] = useState(null);
 
-  const fetchCategories = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/categories`);
-      setCategories(await res.json());
+      const [catRes, desRes] = await Promise.all([
+        fetch(`${API_URL}/categories`),
+        fetch(`${API_URL}/categories/designers`),
+      ]);
+      setCategories(await catRes.json());
+      setDesigners(await desRes.json());
     } catch (e) { console.error(e); }
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchCategories(); }, [fetchCategories]);
-
-  const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` };
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   // ── API helpers ────────────────────────────────────────────────────────────
 
   const apiPost = async (url, body) => {
-    const res = await fetch(url, { method: 'POST', headers: authHeaders, body: JSON.stringify(body) });
+    const res = await fetch(url, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error'); }
     return res.json();
   };
-
   const apiPut = async (url, body) => {
-    const res = await fetch(url, { method: 'PUT', headers: authHeaders, body: JSON.stringify(body) });
+    const res = await fetch(url, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error'); }
     return res.json();
   };
-
   const apiDelete = async (url) => {
     const res = await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error'); }
@@ -107,19 +138,25 @@ export default function CategoriesManager({ showNotification }) {
   const handleAdd = async (name) => {
     if (!name?.trim()) return;
     try {
-      const { level, parentId, categoryId } = adding;
-      if (level === 'category') {
-        await apiPost(`${API_URL}/categories`, { name });
+      const { level, parentId, categoryId, typeId, designerId } = adding;
+      if (level === 'designer') {
+        await apiPost(`${API_URL}/categories/designers`, { name });
+      } else if (level === 'category') {
+        await apiPost(`${API_URL}/categories`, { name, designer: designerId || null });
+        if (designerId) setExpandedDesigners(p => ({ ...p, [designerId]: true }));
       } else if (level === 'type') {
         await apiPost(`${API_URL}/categories/types`, { name, category: parentId });
         setExpandedCats(p => ({ ...p, [parentId]: true }));
-      } else {
+      } else if (level === 'subcategory') {
         await apiPost(`${API_URL}/categories/subcategories`, { name, type: parentId, category: categoryId });
         setExpandedTypes(p => ({ ...p, [parentId]: true }));
+      } else if (level === 'subsubcategory') {
+        await apiPost(`${API_URL}/categories/subsubcategories`, { name, subcategory: parentId, type: typeId, category: categoryId });
+        setExpandedSubs(p => ({ ...p, [parentId]: true }));
       }
       setAdding(null);
       showNotification('Creado correctamente', 'success');
-      fetchCategories();
+      fetchAll();
     } catch (e) {
       showNotification(e.message, 'error');
     }
@@ -129,12 +166,17 @@ export default function CategoriesManager({ showNotification }) {
     if (!name?.trim()) return;
     try {
       const { id, level } = editing;
-      if (level === 'category') await apiPut(`${API_URL}/categories/${id}`, { name });
-      else if (level === 'type') await apiPut(`${API_URL}/categories/types/${id}`, { name });
-      else await apiPut(`${API_URL}/categories/subcategories/${id}`, { name });
+      const routes = {
+        designer: `${API_URL}/categories/designers/${id}`,
+        category: `${API_URL}/categories/${id}`,
+        type: `${API_URL}/categories/types/${id}`,
+        subcategory: `${API_URL}/categories/subcategories/${id}`,
+        subsubcategory: `${API_URL}/categories/subsubcategories/${id}`,
+      };
+      await apiPut(routes[level], { name });
       setEditing(null);
       showNotification('Actualizado', 'success');
-      fetchCategories();
+      fetchAll();
     } catch (e) {
       showNotification(e.message, 'error');
     }
@@ -144,35 +186,397 @@ export default function CategoriesManager({ showNotification }) {
     if (!deleteTarget) return;
     try {
       const { id, level } = deleteTarget;
-      if (level === 'category') await apiDelete(`${API_URL}/categories/${id}`);
-      else if (level === 'type') await apiDelete(`${API_URL}/categories/types/${id}`);
-      else await apiDelete(`${API_URL}/categories/subcategories/${id}`);
+      const routes = {
+        designer: `${API_URL}/categories/designers/${id}`,
+        category: `${API_URL}/categories/${id}`,
+        type: `${API_URL}/categories/types/${id}`,
+        subcategory: `${API_URL}/categories/subcategories/${id}`,
+        subsubcategory: `${API_URL}/categories/subsubcategories/${id}`,
+      };
+      await apiDelete(routes[level]);
       showNotification('Eliminado', 'success');
       setDeleteTarget(null);
-      fetchCategories();
+      fetchAll();
     } catch (e) {
       showNotification(e.message, 'error');
     }
   };
 
-  // ── Action buttons row ─────────────────────────────────────────────────────
+  const handleAssignDesigner = async (designerId) => {
+    try {
+      await apiPut(`${API_URL}/categories/${assignTarget._id}`, { name: assignTarget.name, designer: designerId });
+      showNotification('Diseñador asignado', 'success');
+      setAssignTarget(null);
+      fetchAll();
+    } catch (e) {
+      showNotification(e.message, 'error');
+    }
+  };
 
-  const ActionBtns = ({ id, level, name }) => (
+  // ── Action buttons ─────────────────────────────────────────────────────────
+
+  const ActionBtns = ({ id, level, name, extra }) => (
     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-      <button
-        type="button"
-        onClick={e => { e.stopPropagation(); setEditing({ id, level }); }}
-        className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
-      >
+      {extra}
+      <button type="button" onClick={e => { e.stopPropagation(); setEditing({ id, level }); }}
+        className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">
         <Edit2 size={14} />
       </button>
-      <button
-        type="button"
-        onClick={e => { e.stopPropagation(); setDeleteTarget({ id, level, name }); }}
-        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-      >
+      <button type="button" onClick={e => { e.stopPropagation(); setDeleteTarget({ id, level, name }); }}
+        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
         <Trash2 size={14} />
       </button>
+    </div>
+  );
+
+  // ── Sub-subcategory row ────────────────────────────────────────────────────
+
+  const SubSubRow = ({ ss, subId, typeId, catId, indent }) => (
+    <div className={`flex items-center gap-3 ${indent} pr-8 py-2 group hover:bg-gray-50 border-t border-gray-100/50`}>
+      <span className="w-1 h-1 rounded-full bg-gray-200 flex-shrink-0" />
+      {editing?.id === ss._id ? (
+        <EditableRow name={ss.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
+      ) : (
+        <>
+          <span className="flex-1 text-[10px] font-medium text-gray-400 uppercase tracking-wide">{ss.name}</span>
+          <ActionBtns id={ss._id} level="subsubcategory" name={ss.name} />
+        </>
+      )}
+    </div>
+  );
+
+  // ── Subcategory row (expandable) ───────────────────────────────────────────
+
+  const SubcategoryRow = ({ sub, typeId, catId, subIndent, ssIndent }) => (
+    <div>
+      <div
+        className={`flex items-center gap-3 ${subIndent} pr-8 py-2.5 group hover:bg-gray-100/40 cursor-pointer border-t border-gray-100/60`}
+        onClick={() => setExpandedSubs(p => ({ ...p, [sub._id]: !p[sub._id] }))}
+      >
+        <span className="text-gray-300 flex-shrink-0">
+          {sub.subsubcategories?.length > 0
+            ? (expandedSubs[sub._id] ? <ChevronDown size={12} /> : <ChevronRight size={12} />)
+            : <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block" />
+          }
+        </span>
+        {editing?.id === sub._id ? (
+          <EditableRow name={sub.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
+        ) : (
+          <>
+            <span className="flex-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide">{sub.name}</span>
+            {sub.subsubcategories?.length > 0 && (
+              <span className="text-[10px] font-mono text-gray-300 mr-2">{sub.subsubcategories.length}</span>
+            )}
+            <ActionBtns id={sub._id} level="subcategory" name={sub.name} />
+          </>
+        )}
+      </div>
+
+      {expandedSubs[sub._id] && (
+        <div className="bg-white/40">
+          {(sub.subsubcategories || []).map(ss => (
+            <SubSubRow key={ss._id} ss={ss} subId={sub._id} typeId={typeId} catId={catId} indent={ssIndent} />
+          ))}
+
+          {adding?.level === 'subsubcategory' && adding.parentId === sub._id ? (
+            <div className={`${ssIndent} pr-8 py-3 border-t border-gray-100/50`}>
+              <AddRow placeholder="Nombre de sub-subcategoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); setAdding({ level: 'subsubcategory', parentId: sub._id, typeId, categoryId: catId }); }}
+              className={`flex items-center gap-1.5 ${ssIndent} pr-8 py-2 w-full text-left text-[9px] font-bold text-gray-300 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/50 hover:bg-gray-50/60`}
+            >
+              <Plus size={10} /> Sub-subcategoría
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Type row ───────────────────────────────────────────────────────────────
+
+  const TypeRow = ({ type, catId, typeIndent, subIndent, ssIndent }) => (
+    <div>
+      <div
+        className={`flex items-center gap-3 ${typeIndent} pr-8 py-3 group hover:bg-gray-100/40 cursor-pointer border-t border-gray-100/60`}
+        onClick={() => setExpandedTypes(p => ({ ...p, [type._id]: !p[type._id] }))}
+      >
+        <span className="text-gray-300 flex-shrink-0">
+          {expandedTypes[type._id] ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+        </span>
+        {editing?.id === type._id ? (
+          <EditableRow name={type.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
+        ) : (
+          <>
+            <span className="flex-1 text-xs font-semibold uppercase tracking-wider text-gray-600">{type.name}</span>
+            <span className="text-[10px] font-mono text-gray-400 mr-2">{type.subcategories?.length || 0} subcats</span>
+            <ActionBtns id={type._id} level="type" name={type.name} />
+          </>
+        )}
+      </div>
+
+      {expandedTypes[type._id] && (
+        <div className="bg-gray-50/20">
+          {(type.subcategories || []).map(sub => (
+            <SubcategoryRow key={sub._id} sub={sub} typeId={type._id} catId={catId} subIndent={subIndent} ssIndent={ssIndent} />
+          ))}
+
+          {adding?.level === 'subcategory' && adding.parentId === type._id ? (
+            <div className={`${subIndent} pr-8 py-3 border-t border-gray-100/60`}>
+              <AddRow placeholder="Nombre de subcategoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); setAdding({ level: 'subcategory', parentId: type._id, categoryId: catId }); }}
+              className={`flex items-center gap-1.5 ${subIndent} pr-8 py-2.5 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60`}
+            >
+              <Plus size={12} /> Subcategoría
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Category row ───────────────────────────────────────────────────────────
+
+  const CategoryRow = ({ cat, catIndent, typeIndent, subIndent, ssIndent }) => {
+    const catData = categories.find(c => c._id?.toString() === cat._id?.toString()) || cat;
+    return (
+      <div>
+        <div
+          className={`flex items-center gap-3 ${catIndent} pr-8 py-3.5 group hover:bg-gray-100/60 cursor-pointer border-t border-gray-100/80`}
+          onClick={() => setExpandedCats(p => ({ ...p, [cat._id]: !p[cat._id] }))}
+        >
+          <span className="text-gray-300 flex-shrink-0">
+            {expandedCats[cat._id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </span>
+          {editing?.id === cat._id ? (
+            <EditableRow name={cat.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
+          ) : (
+            <>
+              <span className="flex-1 text-xs font-bold uppercase tracking-wider text-gray-700">{cat.name}</span>
+              <span className="text-[10px] font-mono text-gray-400 mr-2">{catData.types?.length || 0} tipos</span>
+              <ActionBtns
+                id={cat._id}
+                level="category"
+                name={cat.name}
+                extra={
+                  <button type="button" onClick={e => { e.stopPropagation(); setAssignTarget(catData); }}
+                    title="Asignar diseñador"
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                    <LinkIcon size={14} />
+                  </button>
+                }
+              />
+            </>
+          )}
+        </div>
+
+        {expandedCats[cat._id] && (
+          <div className="bg-white/60">
+            {(catData.types || []).map(type => (
+              <TypeRow key={type._id} type={type} catId={cat._id} typeIndent={typeIndent} subIndent={subIndent} ssIndent={ssIndent} />
+            ))}
+
+            {adding?.level === 'type' && adding.parentId === cat._id ? (
+              <div className={`${typeIndent} pr-8 py-3 border-t border-gray-100/60`}>
+                <AddRow placeholder="Nombre del tipo..." onSave={handleAdd} onCancel={() => setAdding(null)} />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); setAdding({ level: 'type', parentId: cat._id }); }}
+                className={`flex items-center gap-1.5 ${typeIndent} pr-8 py-3 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60`}
+              >
+                <Plus size={12} /> Tipo
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Tree view (Diseñadores → Categoría → Tipo → Subcategoría → Sub-sub) ────
+
+  const TreeView = () => {
+    const unassigned = categories.filter(c => !c.designer);
+    return (
+      <div className="space-y-4">
+        <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm">
+          <div className="px-8 py-5 border-b border-gray-100 flex justify-between items-center">
+            <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">
+              {loading ? '...' : `${designers.length} diseñadores`}
+            </p>
+            <button onClick={() => setAdding({ level: 'designer' })}
+              className="flex items-center gap-2 bg-black text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider hover:bg-gray-800 transition-all">
+              <Plus size={15} /> Nuevo Diseñador
+            </button>
+          </div>
+
+          {loading && <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-gray-300" size={28} /></div>}
+          {!loading && designers.length === 0 && !adding && (
+            <p className="text-center text-sm text-gray-400 italic py-12">No hay diseñadores. Crea el primero.</p>
+          )}
+
+          <div className="divide-y divide-gray-50">
+            {designers.map(designer => (
+              <div key={designer._id}>
+                <div
+                  className="flex items-center gap-3 px-8 py-4 group hover:bg-gray-50/60 cursor-pointer"
+                  onClick={() => setExpandedDesigners(p => ({ ...p, [designer._id]: !p[designer._id] }))}
+                >
+                  <span className="text-gray-400 flex-shrink-0">
+                    {expandedDesigners[designer._id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </span>
+                  {editing?.id === designer._id ? (
+                    <EditableRow name={designer.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm font-black uppercase tracking-wide text-gray-900">{designer.name}</span>
+                      <span className="text-[10px] font-mono text-gray-400 mr-2">{designer.categories?.length || 0} cats</span>
+                      <ActionBtns id={designer._id} level="designer" name={designer.name} />
+                    </>
+                  )}
+                </div>
+
+                {expandedDesigners[designer._id] && (
+                  <div className="bg-gray-50/40">
+                    {(designer.categories || []).map(cat => (
+                      <CategoryRow key={cat._id} cat={cat}
+                        catIndent="pl-14" typeIndent="pl-20" subIndent="pl-28" ssIndent="pl-36" />
+                    ))}
+                    {adding?.level === 'category' && adding.designerId === designer._id ? (
+                      <div className="pl-14 pr-8 py-3 border-t border-gray-100/60">
+                        <AddRow placeholder="Nombre de categoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
+                      </div>
+                    ) : (
+                      <button type="button"
+                        onClick={e => { e.stopPropagation(); setAdding({ level: 'category', designerId: designer._id }); }}
+                        className="flex items-center gap-1.5 pl-14 pr-8 py-2.5 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60">
+                        <Plus size={12} /> Categoría
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {adding?.level === 'designer' && (
+            <div className="px-8 py-4 border-t border-gray-100 bg-gray-50/60">
+              <AddRow placeholder="Nombre del diseñador..." onSave={handleAdd} onCancel={() => setAdding(null)} />
+            </div>
+          )}
+        </div>
+
+        {(unassigned.length > 0 || (adding?.level === 'category' && !adding.designerId)) && (
+          <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm">
+            <div className="px-8 py-5 border-b border-gray-100 flex justify-between items-center">
+              <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">Sin diseñador · {unassigned.length} categorías</p>
+              <button onClick={() => setAdding({ level: 'category' })}
+                className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider hover:border-black hover:text-black transition-all">
+                <Plus size={13} /> Categoría
+              </button>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {unassigned.map(cat => (
+                <CategoryRow key={cat._id} cat={cat}
+                  catIndent="pl-8" typeIndent="pl-14" subIndent="pl-22" ssIndent="pl-28" />
+              ))}
+            </div>
+            {adding?.level === 'category' && !adding.designerId && (
+              <div className="px-8 py-4 border-t border-gray-100 bg-gray-50/60">
+                <AddRow placeholder="Nombre de categoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Flat categories view ──────────────────────────────────────────────────
+
+  const FlatCategoriesView = () => (
+    <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm">
+      <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+        <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">
+          {loading ? '...' : `${categories.length} categorías`}
+        </p>
+        <button onClick={() => setAdding({ level: 'category' })}
+          className="flex items-center gap-2 bg-black text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider hover:bg-gray-800 transition-all">
+          <Plus size={15} /> Nueva Categoría
+        </button>
+      </div>
+
+      {loading && <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-gray-300" size={32} /></div>}
+
+      <div className="divide-y divide-gray-50">
+        {categories.map(cat => (
+          <div key={cat._id}>
+            <div
+              className="flex items-center gap-3 px-8 py-4 group hover:bg-gray-50/60 cursor-pointer"
+              onClick={() => setExpandedCats(p => ({ ...p, [cat._id]: !p[cat._id] }))}
+            >
+              <span className="text-gray-400 flex-shrink-0">
+                {expandedCats[cat._id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              </span>
+              {editing?.id === cat._id ? (
+                <EditableRow name={cat.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
+              ) : (
+                <>
+                  <span className="flex-1 text-sm font-bold uppercase tracking-wide text-gray-900">{cat.name}</span>
+                  {cat.designer && (
+                    <span className="text-[10px] font-mono bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md mr-2 uppercase">{cat.designer.name}</span>
+                  )}
+                  <span className="text-[10px] font-mono text-gray-400 mr-2">{cat.types?.length || 0} tipos</span>
+                  <ActionBtns id={cat._id} level="category" name={cat.name}
+                    extra={
+                      <button type="button" onClick={e => { e.stopPropagation(); setAssignTarget(cat); }}
+                        title="Asignar diseñador"
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        <LinkIcon size={14} />
+                      </button>
+                    }
+                  />
+                </>
+              )}
+            </div>
+
+            {expandedCats[cat._id] && (
+              <div className="bg-gray-50/40">
+                {(cat.types || []).map(type => (
+                  <TypeRow key={type._id} type={type} catId={cat._id}
+                    typeIndent="pl-14" subIndent="pl-22" ssIndent="pl-28" />
+                ))}
+                {adding?.level === 'type' && adding.parentId === cat._id ? (
+                  <div className="pl-14 pr-8 py-3 border-t border-gray-100/60">
+                    <AddRow placeholder="Nombre del tipo..." onSave={handleAdd} onCancel={() => setAdding(null)} />
+                  </div>
+                ) : (
+                  <button type="button"
+                    onClick={e => { e.stopPropagation(); setAdding({ level: 'type', parentId: cat._id }); }}
+                    className="flex items-center gap-1.5 pl-14 pr-8 py-3 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60">
+                    <Plus size={12} /> Tipo
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {adding?.level === 'category' && !adding.designerId && (
+        <div className="px-8 py-4 border-t border-gray-100 bg-gray-50/60">
+          <AddRow placeholder="Nombre de categoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
+        </div>
+      )}
     </div>
   );
 
@@ -180,190 +584,27 @@ export default function CategoriesManager({ showNotification }) {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm">
-        {/* Header */}
-        <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
-          <div>
-            <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">
-              {loading ? '...' : `${categories.length} categorías`}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={fetchCategories}
-              className="p-2.5 bg-white border border-gray-200 rounded-xl hover:border-gray-900 text-gray-400 hover:text-black transition-all"
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            </button>
-            <button
-              onClick={() => setAdding({ level: 'category' })}
-              className="flex items-center gap-2 bg-black text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider hover:bg-gray-800 transition-all"
-            >
-              <Plus size={15} /> Nueva Categoría
-            </button>
-          </div>
-        </div>
-
-        {/* Tree */}
-        {loading && (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="animate-spin text-gray-300" size={32} />
-          </div>
-        )}
-
-        {!loading && categories.length === 0 && !adding && (
-          <p className="text-center text-sm text-gray-400 italic py-16">No hay categorías. Crea la primera.</p>
-        )}
-
-        <div className="divide-y divide-gray-50">
-          {categories.map(cat => (
-            <div key={cat._id}>
-              {/* Category row */}
-              <div
-                className="flex items-center gap-3 px-8 py-4 group hover:bg-gray-50/60 cursor-pointer"
-                onClick={() => setExpandedCats(p => ({ ...p, [cat._id]: !p[cat._id] }))}
-              >
-                <span className="text-gray-400 flex-shrink-0">
-                  {expandedCats[cat._id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                </span>
-
-                {editing?.id === cat._id ? (
-                  <EditableRow
-                    name={cat.name}
-                    onSave={handleEdit}
-                    onCancel={() => setEditing(null)}
-                  />
-                ) : (
-                  <>
-                    <span className="flex-1 text-sm font-bold uppercase tracking-wide text-gray-900">
-                      {cat.name}
-                    </span>
-                    <span className="text-[10px] font-mono text-gray-400 mr-2">
-                      {cat.types?.length || 0} tipos
-                    </span>
-                    <ActionBtns id={cat._id} level="category" name={cat.name} />
-                  </>
-                )}
-              </div>
-
-              {/* Types */}
-              {expandedCats[cat._id] && (
-                <div className="bg-gray-50/40">
-                  {(cat.types || []).map(type => (
-                    <div key={type._id}>
-                      {/* Type row */}
-                      <div
-                        className="flex items-center gap-3 pl-14 pr-8 py-3 group hover:bg-gray-100/60 cursor-pointer border-t border-gray-100/80"
-                        onClick={() => setExpandedTypes(p => ({ ...p, [type._id]: !p[type._id] }))}
-                      >
-                        <span className="text-gray-300 flex-shrink-0">
-                          {expandedTypes[type._id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        </span>
-
-                        {editing?.id === type._id ? (
-                          <EditableRow
-                            name={type.name}
-                            onSave={handleEdit}
-                            onCancel={() => setEditing(null)}
-                          />
-                        ) : (
-                          <>
-                            <span className="flex-1 text-xs font-bold uppercase tracking-wider text-gray-700">
-                              {type.name}
-                            </span>
-                            <span className="text-[10px] font-mono text-gray-400 mr-2">
-                              {type.subcategories?.length || 0} subcats
-                            </span>
-                            <ActionBtns id={type._id} level="type" name={type.name} />
-                          </>
-                        )}
-                      </div>
-
-                      {/* Subcategories */}
-                      {expandedTypes[type._id] && (
-                        <div className="bg-white/60">
-                          {(type.subcategories || []).map(sub => (
-                            <div
-                              key={sub._id}
-                              className="flex items-center gap-3 pl-24 pr-8 py-2.5 group hover:bg-gray-50 border-t border-gray-100/60"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
-
-                              {editing?.id === sub._id ? (
-                                <EditableRow
-                                  name={sub.name}
-                                  onSave={handleEdit}
-                                  onCancel={() => setEditing(null)}
-                                />
-                              ) : (
-                                <>
-                                  <span className="flex-1 text-xs font-medium text-gray-600 uppercase tracking-wide">
-                                    {sub.name}
-                                  </span>
-                                  <ActionBtns id={sub._id} level="subcategory" name={sub.name} />
-                                </>
-                              )}
-                            </div>
-                          ))}
-
-                          {/* Add subcategory form */}
-                          {adding?.level === 'subcategory' && adding.parentId === type._id ? (
-                            <div className="pl-24 pr-8 py-3 border-t border-gray-100/60">
-                              <AddRow
-                                placeholder="Nombre de subcategoría..."
-                                onSave={handleAdd}
-                                onCancel={() => setAdding(null)}
-                              />
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={e => { e.stopPropagation(); setAdding({ level: 'subcategory', parentId: type._id, categoryId: cat._id }); }}
-                              className="flex items-center gap-1.5 pl-24 pr-8 py-2.5 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60"
-                            >
-                              <Plus size={12} /> Subcategoría
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Add type form */}
-                  {adding?.level === 'type' && adding.parentId === cat._id ? (
-                    <div className="pl-14 pr-8 py-3 border-t border-gray-100/60">
-                      <AddRow
-                        placeholder="Nombre del tipo..."
-                        onSave={handleAdd}
-                        onCancel={() => setAdding(null)}
-                      />
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={e => { e.stopPropagation(); setAdding({ level: 'type', parentId: cat._id }); }}
-                      className="flex items-center gap-1.5 pl-14 pr-8 py-3 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60"
-                    >
-                      <Plus size={12} /> Tipo
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Add category form at bottom */}
-        {adding?.level === 'category' && (
-          <div className="px-8 py-4 border-t border-gray-100 bg-gray-50/60">
-            <AddRow
-              placeholder="Nombre de categoría..."
-              onSave={handleAdd}
-              onCancel={() => setAdding(null)}
-            />
-          </div>
-        )}
+      <div className="flex items-center gap-2">
+        <button onClick={() => setView('tree')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${view === 'tree' ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-500 hover:text-black hover:border-black'}`}>
+          Vista Diseñadores
+        </button>
+        <button onClick={() => setView('categories')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${view === 'categories' ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-500 hover:text-black hover:border-black'}`}>
+          Vista Categorías
+        </button>
+        <button onClick={fetchAll}
+          className="ml-auto p-2.5 bg-white border border-gray-200 rounded-xl hover:border-gray-900 text-gray-400 hover:text-black transition-all"
+          title="Actualizar">
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+        </button>
       </div>
+
+      {view === 'tree' ? <TreeView /> : <FlatCategoriesView />}
+
+      {assignTarget && (
+        <AssignDesignerModal category={assignTarget} designers={designers} onSave={handleAssignDesigner} onClose={() => setAssignTarget(null)} />
+      )}
 
       <ConfirmModal
         isOpen={deleteTarget !== null}

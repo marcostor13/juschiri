@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const CategorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, unique: true, index: true, trim: true },
+    designer: { type: mongoose.Schema.Types.ObjectId, ref: 'Designer', default: null },
   },
   { timestamps: true }
 );
