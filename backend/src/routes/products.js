@@ -87,11 +87,23 @@ router.get('/:codigo', async (req, res) => {
   }
 });
 
+// Convierte strings vacíos a null en campos ObjectId opcionales
+function sanitizeObjectIds(body) {
+  const fields = ['category', 'type', 'subcategory', 'subsubcategory'];
+  const cleaned = { ...body };
+  for (const field of fields) {
+    if (cleaned[field] === '' || cleaned[field] === undefined) {
+      cleaned[field] = null;
+    }
+  }
+  return cleaned;
+}
+
 // POST /api/products
 router.post('/', async (req, res) => {
   try {
     await connectDB();
-    const product = await Product.create(req.body);
+    const product = await Product.create(sanitizeObjectIds(req.body));
     res.status(201).json(product);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -104,7 +116,7 @@ router.put('/:codigo', async (req, res) => {
     await connectDB();
     const product = await Product.findOneAndUpdate(
       { codigo: req.params.codigo },
-      { $set: req.body },
+      { $set: sanitizeObjectIds(req.body) },
       { new: true, runValidators: true }
     ).lean();
     if (!product) return res.status(404).json({ error: 'Not found' });

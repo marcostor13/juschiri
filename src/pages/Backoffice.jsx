@@ -295,6 +295,11 @@ export default function Backoffice() {
       if (typeof payload.type === 'object' && payload.type?._id) payload.type = payload.type._id;
       if (typeof payload.subcategory === 'object' && payload.subcategory?._id) payload.subcategory = payload.subcategory._id;
       if (typeof payload.subsubcategory === 'object' && payload.subsubcategory?._id) payload.subsubcategory = payload.subsubcategory._id;
+      // Mongoose no puede castear "" a ObjectId — enviar null cuando no hay selección
+      if (!payload.category) payload.category = null;
+      if (!payload.type) payload.type = null;
+      if (!payload.subcategory) payload.subcategory = null;
+      if (!payload.subsubcategory) payload.subsubcategory = null;
       
       const url = initialProductRef.current 
         ? `${API_URL}/products/${initialProductRef.current}` 
