@@ -286,6 +286,14 @@ export default function Backoffice() {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!currentProduct.codigo?.trim()) {
+      showNotification('El SKU es requerido', 'error');
+      return;
+    }
+    if (!currentProduct.nombre?.trim()) {
+      showNotification('El nombre es requerido', 'error');
+      return;
+    }
     setFormLoading(true);
     try {
       const token = localStorage.getItem('token');

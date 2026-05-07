@@ -835,6 +835,7 @@ export default function Storefront() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
   const [settings, setSettings] = useState({ whatsapp_number: '' });
+  const [settingsReady, setSettingsReady] = useState(false);
 
   const showNotification = useCallback((message, type = 'info') => {
       setNotification({ show: true, message, type });
@@ -860,8 +861,10 @@ export default function Storefront() {
         setAllCategories(catData || []);
         setAllDesigners(desData || []);
         setSettings(prev => ({ ...prev, ...setData }));
+        setSettingsReady(true);
       } catch (err) {
         console.error("Error fetching data:", err);
+        setSettingsReady(true);
       }
       setLoading(false);
     };
@@ -1026,8 +1029,14 @@ export default function Storefront() {
         whatsappNumber={settings.whatsapp_number}
       />
 
-      <HeroSlider customSlides={settings.hero_slides} />
-      <TrendingGallery customGallery={settings.trending_gallery} />
+      {settingsReady ? (
+        <>
+          <HeroSlider customSlides={settings.hero_slides} />
+          <TrendingGallery customGallery={settings.trending_gallery} />
+        </>
+      ) : (
+        <div className="h-[85vh] lg:h-[70vh] bg-gray-100 animate-pulse border-b border-gray-200" />
+      )}
 
       <main id="shop" className="flex-1 w-full max-w-[1920px] mx-auto">
         <div className="sticky top-20 sm:top-28 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 flex flex-col transition-all">
