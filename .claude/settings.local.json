@@ -17,7 +17,8 @@
       "Bash(powershell -Command \"Expand-Archive -Path 'C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\\\\temp_modelos.zip' -DestinationPath 'C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\\\\temp_xlsx_extract' -Force\")",
       "Bash(node *)",
       "Bash(grep -E \"\\\\.\\(xlsx|json|js\\)$\")",
-      "PowerShell(Get-ChildItem \"C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\\\\backend\" -Recurse -Exclude \"node_modules\" | Where-Object { !$_.FullName.Contains\\(\"node_modules\"\\) } | Select-Object FullName | Format-Table -AutoSize)"
+      "PowerShell(Get-ChildItem \"C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\\\\backend\" -Recurse -Exclude \"node_modules\" | Where-Object { !$_.FullName.Contains\\(\"node_modules\"\\) } | Select-Object FullName | Format-Table -AutoSize)",
+      "Bash(dir C:\\\\Marcos\\\\Proyectos *)"
     ]
   }
 }

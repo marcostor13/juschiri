@@ -177,7 +177,6 @@ router.post('/types', auth, async (req, res) => {
     const type = await Type.create({ name, category, slug });
     res.status(201).json(type);
   } catch (err) {
-    if (err.code === 11000) return res.status(400).json({ error: 'Tipo ya existe' });
     res.status(400).json({ error: err.message });
   }
 });
