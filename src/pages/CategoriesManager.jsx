@@ -6,8 +6,6 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 const token = () => localStorage.getItem('token');
 const authHeaders = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` });
 
-// ── Inline editable row ──────────────────────────────────────────────────────
-
 function EditableRow({ name, onSave, onCancel }) {
   const [value, setValue] = useState(name);
   return (
@@ -51,8 +49,6 @@ function AddRow({ placeholder, onSave, onCancel }) {
   );
 }
 
-// ── Assign designer modal ────────────────────────────────────────────────────
-
 function AssignDesignerModal({ category, designers, onSave, onClose }) {
   const [selected, setSelected] = useState(category.designer?._id || category.designer || '');
   return (
@@ -80,21 +76,15 @@ function AssignDesignerModal({ category, designers, onSave, onClose }) {
   );
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
-
 export default function CategoriesManager({ showNotification }) {
   const [designers, setDesigners] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('tree');
 
-  // Expand state per level
   const [expandedDesigners, setExpandedDesigners] = useState({});
   const [expandedCats, setExpandedCats] = useState({});
-  const [expandedTypes, setExpandedTypes] = useState({});
-  const [expandedSubs, setExpandedSubs] = useState({});
 
-  // Editing / Adding / Deleting
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -115,8 +105,6 @@ export default function CategoriesManager({ showNotification }) {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // ── API helpers ────────────────────────────────────────────────────────────
-
   const apiPost = async (url, body) => {
     const res = await fetch(url, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error'); }
@@ -133,26 +121,18 @@ export default function CategoriesManager({ showNotification }) {
     return res.json();
   };
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
-
   const handleAdd = async (name) => {
     if (!name?.trim()) return;
     try {
-      const { level, parentId, categoryId, typeId, designerId } = adding;
+      const { level, parentId, designerId } = adding;
       if (level === 'designer') {
         await apiPost(`${API_URL}/categories/designers`, { name });
       } else if (level === 'category') {
         await apiPost(`${API_URL}/categories`, { name, designer: designerId || null });
         if (designerId) setExpandedDesigners(p => ({ ...p, [designerId]: true }));
-      } else if (level === 'type') {
-        await apiPost(`${API_URL}/categories/types`, { name, category: parentId });
-        setExpandedCats(p => ({ ...p, [parentId]: true }));
       } else if (level === 'subcategory') {
-        await apiPost(`${API_URL}/categories/subcategories`, { name, type: parentId, category: categoryId });
-        setExpandedTypes(p => ({ ...p, [parentId]: true }));
-      } else if (level === 'subsubcategory') {
-        await apiPost(`${API_URL}/categories/subsubcategories`, { name, subcategory: parentId, type: typeId, category: categoryId });
-        setExpandedSubs(p => ({ ...p, [parentId]: true }));
+        await apiPost(`${API_URL}/categories/subcategories`, { name, category: parentId });
+        setExpandedCats(p => ({ ...p, [parentId]: true }));
       }
       setAdding(null);
       showNotification('Creado correctamente', 'success');
@@ -169,9 +149,7 @@ export default function CategoriesManager({ showNotification }) {
       const routes = {
         designer: `${API_URL}/categories/designers/${id}`,
         category: `${API_URL}/categories/${id}`,
-        type: `${API_URL}/categories/types/${id}`,
         subcategory: `${API_URL}/categories/subcategories/${id}`,
-        subsubcategory: `${API_URL}/categories/subsubcategories/${id}`,
       };
       await apiPut(routes[level], { name });
       setEditing(null);
@@ -189,9 +167,7 @@ export default function CategoriesManager({ showNotification }) {
       const routes = {
         designer: `${API_URL}/categories/designers/${id}`,
         category: `${API_URL}/categories/${id}`,
-        type: `${API_URL}/categories/types/${id}`,
         subcategory: `${API_URL}/categories/subcategories/${id}`,
-        subsubcategory: `${API_URL}/categories/subsubcategories/${id}`,
       };
       await apiDelete(routes[level]);
       showNotification('Eliminado', 'success');
@@ -213,8 +189,6 @@ export default function CategoriesManager({ showNotification }) {
     }
   };
 
-  // ── Action buttons ─────────────────────────────────────────────────────────
-
   const ActionBtns = ({ id, level, name, extra }) => (
     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
       {extra}
@@ -229,122 +203,25 @@ export default function CategoriesManager({ showNotification }) {
     </div>
   );
 
-  // ── Sub-subcategory row ────────────────────────────────────────────────────
+  // ── Subcategory row ────────────────────────────────────────────────────────────
 
-  const SubSubRow = ({ ss, subId, typeId, catId, indent }) => (
-    <div className={`flex items-center gap-3 ${indent} pr-8 py-2 group hover:bg-gray-50 border-t border-gray-100/50`}>
-      <span className="w-1 h-1 rounded-full bg-gray-200 flex-shrink-0" />
-      {editing?.id === ss._id ? (
-        <EditableRow name={ss.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
+  const SubcatRow = ({ sub, indent }) => (
+    <div className={`flex items-center gap-3 ${indent} pr-8 py-2.5 group hover:bg-gray-50 border-t border-gray-100/60`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-gray-200 flex-shrink-0" />
+      {editing?.id === sub._id ? (
+        <EditableRow name={sub.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
       ) : (
         <>
-          <span className="flex-1 text-[10px] font-medium text-gray-400 uppercase tracking-wide">{ss.name}</span>
-          <ActionBtns id={ss._id} level="subsubcategory" name={ss.name} />
+          <span className="flex-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide">{sub.name}</span>
+          <ActionBtns id={sub._id} level="subcategory" name={sub.name} />
         </>
       )}
     </div>
   );
 
-  // ── Subcategory row (expandable) ───────────────────────────────────────────
+  // ── Category row ───────────────────────────────────────────────────────────────
 
-  const SubcategoryRow = ({ sub, typeId, catId, subIndent, ssIndent }) => (
-    <div>
-      <div
-        className={`flex items-center gap-3 ${subIndent} pr-8 py-2.5 group hover:bg-gray-100/40 cursor-pointer border-t border-gray-100/60`}
-        onClick={() => setExpandedSubs(p => ({ ...p, [sub._id]: !p[sub._id] }))}
-      >
-        <span className="text-gray-300 flex-shrink-0">
-          {sub.subsubcategories?.length > 0
-            ? (expandedSubs[sub._id] ? <ChevronDown size={12} /> : <ChevronRight size={12} />)
-            : <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block" />
-          }
-        </span>
-        {editing?.id === sub._id ? (
-          <EditableRow name={sub.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
-        ) : (
-          <>
-            <span className="flex-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide">{sub.name}</span>
-            {sub.subsubcategories?.length > 0 && (
-              <span className="text-[10px] font-mono text-gray-300 mr-2">{sub.subsubcategories.length}</span>
-            )}
-            <ActionBtns id={sub._id} level="subcategory" name={sub.name} />
-          </>
-        )}
-      </div>
-
-      {expandedSubs[sub._id] && (
-        <div className="bg-white/40">
-          {(sub.subsubcategories || []).map(ss => (
-            <SubSubRow key={ss._id} ss={ss} subId={sub._id} typeId={typeId} catId={catId} indent={ssIndent} />
-          ))}
-
-          {adding?.level === 'subsubcategory' && adding.parentId === sub._id ? (
-            <div className={`${ssIndent} pr-8 py-3 border-t border-gray-100/50`}>
-              <AddRow placeholder="Nombre de sub-subcategoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); setAdding({ level: 'subsubcategory', parentId: sub._id, typeId, categoryId: catId }); }}
-              className={`flex items-center gap-1.5 ${ssIndent} pr-8 py-2 w-full text-left text-[9px] font-bold text-gray-300 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/50 hover:bg-gray-50/60`}
-            >
-              <Plus size={10} /> Sub-subcategoría
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
-  // ── Type row ───────────────────────────────────────────────────────────────
-
-  const TypeRow = ({ type, catId, typeIndent, subIndent, ssIndent }) => (
-    <div>
-      <div
-        className={`flex items-center gap-3 ${typeIndent} pr-8 py-3 group hover:bg-gray-100/40 cursor-pointer border-t border-gray-100/60`}
-        onClick={() => setExpandedTypes(p => ({ ...p, [type._id]: !p[type._id] }))}
-      >
-        <span className="text-gray-300 flex-shrink-0">
-          {expandedTypes[type._id] ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-        </span>
-        {editing?.id === type._id ? (
-          <EditableRow name={type.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
-        ) : (
-          <>
-            <span className="flex-1 text-xs font-semibold uppercase tracking-wider text-gray-600">{type.name}</span>
-            <span className="text-[10px] font-mono text-gray-400 mr-2">{type.subcategories?.length || 0} subcats</span>
-            <ActionBtns id={type._id} level="type" name={type.name} />
-          </>
-        )}
-      </div>
-
-      {expandedTypes[type._id] && (
-        <div className="bg-gray-50/20">
-          {(type.subcategories || []).map(sub => (
-            <SubcategoryRow key={sub._id} sub={sub} typeId={type._id} catId={catId} subIndent={subIndent} ssIndent={ssIndent} />
-          ))}
-
-          {adding?.level === 'subcategory' && adding.parentId === type._id ? (
-            <div className={`${subIndent} pr-8 py-3 border-t border-gray-100/60`}>
-              <AddRow placeholder="Nombre de subcategoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); setAdding({ level: 'subcategory', parentId: type._id, categoryId: catId }); }}
-              className={`flex items-center gap-1.5 ${subIndent} pr-8 py-2.5 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60`}
-            >
-              <Plus size={12} /> Subcategoría
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
-  // ── Category row ───────────────────────────────────────────────────────────
-
-  const CategoryRow = ({ cat, catIndent, typeIndent, subIndent, ssIndent }) => {
+  const CategoryRow = ({ cat, catIndent, subIndent }) => {
     const catData = categories.find(c => c._id?.toString() === cat._id?.toString()) || cat;
     return (
       <div>
@@ -360,7 +237,7 @@ export default function CategoriesManager({ showNotification }) {
           ) : (
             <>
               <span className="flex-1 text-xs font-bold uppercase tracking-wider text-gray-700">{cat.name}</span>
-              <span className="text-[10px] font-mono text-gray-400 mr-2">{catData.types?.length || 0} tipos</span>
+              <span className="text-[10px] font-mono text-gray-400 mr-2">{catData.subcategories?.length || 0} subcats</span>
               <ActionBtns
                 id={cat._id}
                 level="category"
@@ -379,21 +256,21 @@ export default function CategoriesManager({ showNotification }) {
 
         {expandedCats[cat._id] && (
           <div className="bg-white/60">
-            {(catData.types || []).map(type => (
-              <TypeRow key={type._id} type={type} catId={cat._id} typeIndent={typeIndent} subIndent={subIndent} ssIndent={ssIndent} />
+            {(catData.subcategories || []).map(sub => (
+              <SubcatRow key={sub._id} sub={sub} indent={subIndent} />
             ))}
 
-            {adding?.level === 'type' && adding.parentId === cat._id ? (
-              <div className={`${typeIndent} pr-8 py-3 border-t border-gray-100/60`}>
-                <AddRow placeholder="Nombre del tipo..." onSave={handleAdd} onCancel={() => setAdding(null)} />
+            {adding?.level === 'subcategory' && adding.parentId === cat._id ? (
+              <div className={`${subIndent} pr-8 py-3 border-t border-gray-100/60`}>
+                <AddRow placeholder="Nombre de subcategoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
               </div>
             ) : (
               <button
                 type="button"
-                onClick={e => { e.stopPropagation(); setAdding({ level: 'type', parentId: cat._id }); }}
-                className={`flex items-center gap-1.5 ${typeIndent} pr-8 py-3 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60`}
+                onClick={e => { e.stopPropagation(); setAdding({ level: 'subcategory', parentId: cat._id }); }}
+                className={`flex items-center gap-1.5 ${subIndent} pr-8 py-2.5 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60`}
               >
-                <Plus size={12} /> Tipo
+                <Plus size={12} /> Subcategoría
               </button>
             )}
           </div>
@@ -402,7 +279,7 @@ export default function CategoriesManager({ showNotification }) {
     );
   };
 
-  // ── Tree view (Diseñadores → Categoría → Tipo → Subcategoría → Sub-sub) ────
+  // ── Tree view (Diseñador → Categoría → Subcategoría) ─────────────────────────
 
   const TreeView = () => {
     const unassigned = categories.filter(c => !c.designer);
@@ -448,8 +325,7 @@ export default function CategoriesManager({ showNotification }) {
                 {expandedDesigners[designer._id] && (
                   <div className="bg-gray-50/40">
                     {(designer.categories || []).map(cat => (
-                      <CategoryRow key={cat._id} cat={cat}
-                        catIndent="pl-14" typeIndent="pl-20" subIndent="pl-28" ssIndent="pl-36" />
+                      <CategoryRow key={cat._id} cat={cat} catIndent="pl-14" subIndent="pl-20" />
                     ))}
                     {adding?.level === 'category' && adding.designerId === designer._id ? (
                       <div className="pl-14 pr-8 py-3 border-t border-gray-100/60">
@@ -486,8 +362,7 @@ export default function CategoriesManager({ showNotification }) {
             </div>
             <div className="divide-y divide-gray-50">
               {unassigned.map(cat => (
-                <CategoryRow key={cat._id} cat={cat}
-                  catIndent="pl-8" typeIndent="pl-14" subIndent="pl-22" ssIndent="pl-28" />
+                <CategoryRow key={cat._id} cat={cat} catIndent="pl-8" subIndent="pl-14" />
               ))}
             </div>
             {adding?.level === 'category' && !adding.designerId && (
@@ -501,7 +376,7 @@ export default function CategoriesManager({ showNotification }) {
     );
   };
 
-  // ── Flat categories view ──────────────────────────────────────────────────
+  // ── Flat categories view ──────────────────────────────────────────────────────
 
   const FlatCategoriesView = () => (
     <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm">
@@ -535,7 +410,7 @@ export default function CategoriesManager({ showNotification }) {
                   {cat.designer && (
                     <span className="text-[10px] font-mono bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md mr-2 uppercase">{cat.designer.name}</span>
                   )}
-                  <span className="text-[10px] font-mono text-gray-400 mr-2">{cat.types?.length || 0} tipos</span>
+                  <span className="text-[10px] font-mono text-gray-400 mr-2">{cat.subcategories?.length || 0} subcats</span>
                   <ActionBtns id={cat._id} level="category" name={cat.name}
                     extra={
                       <button type="button" onClick={e => { e.stopPropagation(); setAssignTarget(cat); }}
@@ -551,19 +426,18 @@ export default function CategoriesManager({ showNotification }) {
 
             {expandedCats[cat._id] && (
               <div className="bg-gray-50/40">
-                {(cat.types || []).map(type => (
-                  <TypeRow key={type._id} type={type} catId={cat._id}
-                    typeIndent="pl-14" subIndent="pl-22" ssIndent="pl-28" />
+                {(cat.subcategories || []).map(sub => (
+                  <SubcatRow key={sub._id} sub={sub} indent="pl-14" />
                 ))}
-                {adding?.level === 'type' && adding.parentId === cat._id ? (
+                {adding?.level === 'subcategory' && adding.parentId === cat._id ? (
                   <div className="pl-14 pr-8 py-3 border-t border-gray-100/60">
-                    <AddRow placeholder="Nombre del tipo..." onSave={handleAdd} onCancel={() => setAdding(null)} />
+                    <AddRow placeholder="Nombre de subcategoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
                   </div>
                 ) : (
                   <button type="button"
-                    onClick={e => { e.stopPropagation(); setAdding({ level: 'type', parentId: cat._id }); }}
-                    className="flex items-center gap-1.5 pl-14 pr-8 py-3 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60">
-                    <Plus size={12} /> Tipo
+                    onClick={e => { e.stopPropagation(); setAdding({ level: 'subcategory', parentId: cat._id }); }}
+                    className="flex items-center gap-1.5 pl-14 pr-8 py-2.5 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60">
+                    <Plus size={12} /> Subcategoría
                   </button>
                 )}
               </div>
@@ -579,8 +453,6 @@ export default function CategoriesManager({ showNotification }) {
       )}
     </div>
   );
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6 animate-fade-in">

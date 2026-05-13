@@ -266,12 +266,19 @@ export default function Backoffice() {
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
   const openModal = (product = null) => {
-    setCurrentProduct(product || {
-      codigo: '', nombre: '', marca: '', precio: 0, descuento: 0,
-      stock_actual: 0, stock_anterior: 0, imagen_url: '', 
-      galeria: [], variantes: [],
-      category: '', type: '', subcategory: '', subsubcategory: ''
-    });
+    if (product) {
+      const catId = product.category && typeof product.category === 'object' ? product.category._id : product.category;
+      const cat = allCategories.find(c => c._id === catId);
+      const designerId = cat?.designer?._id || cat?.designer || '';
+      setCurrentProduct({ ...product, designer: designerId });
+    } else {
+      setCurrentProduct({
+        codigo: '', nombre: '', marca: '', precio: 0, descuento: 0,
+        stock_actual: 0, stock_anterior: 0, imagen_url: '',
+        galeria: [], variantes: [],
+        category: '', subcategory: '', designer: ''
+      });
+    }
     setIsModalOpen(true);
   };
 
@@ -299,15 +306,13 @@ export default function Backoffice() {
       const token = localStorage.getItem('token');
       const method = initialProductRef.current ? 'PUT' : 'POST';
       const payload = { ...currentProduct };
+      delete payload.designer;
       if (typeof payload.category === 'object' && payload.category?._id) payload.category = payload.category._id;
-      if (typeof payload.type === 'object' && payload.type?._id) payload.type = payload.type._id;
       if (typeof payload.subcategory === 'object' && payload.subcategory?._id) payload.subcategory = payload.subcategory._id;
-      if (typeof payload.subsubcategory === 'object' && payload.subsubcategory?._id) payload.subsubcategory = payload.subsubcategory._id;
-      // Mongoose no puede castear "" a ObjectId — enviar null cuando no hay selección
       if (!payload.category) payload.category = null;
-      if (!payload.type) payload.type = null;
       if (!payload.subcategory) payload.subcategory = null;
-      if (!payload.subsubcategory) payload.subsubcategory = null;
+      payload.type = null;
+      payload.subsubcategory = null;
       
       const url = initialProductRef.current 
         ? `${API_URL}/products/${initialProductRef.current}` 
@@ -992,79 +997,76 @@ export default function Backoffice() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2 ml-1">Categoría</label>
-                                        <select 
-                                            className="w-full p-3 bg-white border border-gray-200 rounded-xl font-bold text-[10px] uppercase outline-none focus:border-black"
-                                            value={(currentProduct.category && typeof currentProduct.category === 'object') ? currentProduct.category._id : currentProduct.category || ""}
-                                            onChange={e => setCurrentProduct({...currentProduct, category: e.target.value, type: '', subcategory: '', subsubcategory: ''})}
-                                        >
-                                            <option value="">ELEGIR...</option>
-                                            {allCategories.map(c => (
-                                                <option key={c._id} value={c._id}>{c.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2 ml-1">Tipo</label>
-                                        <select 
-                                            className="w-full p-3 bg-white border border-gray-200 rounded-xl font-bold text-[10px] uppercase outline-none focus:border-black disabled:opacity-40"
-                                            value={(currentProduct.type && typeof currentProduct.type === 'object') ? currentProduct.type._id : currentProduct.type || ""}
-                                            onChange={e => setCurrentProduct({...currentProduct, type: e.target.value, subcategory: '', subsubcategory: ''})}
-                                            disabled={!currentProduct.category}
-                                        >
-                                            <option value="">ELEGIR...</option>
-                                            {(allCategories.find(c => c._id === ((currentProduct.category && typeof currentProduct.category === 'object') ? currentProduct.category._id : currentProduct.category))?.types || []).map(t => (
-                                                <option key={t._id} value={t._id}>{t.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2 ml-1">Subcat</label>
-                                        <select 
-                                            className="w-full p-3 bg-white border border-gray-200 rounded-xl font-bold text-[10px] uppercase outline-none focus:border-black disabled:opacity-40"
-                                            value={(currentProduct.subcategory && typeof currentProduct.subcategory === 'object') ? currentProduct.subcategory._id : currentProduct.subcategory || ""}
-                                            onChange={e => setCurrentProduct({...currentProduct, subcategory: e.target.value, subsubcategory: ''})}
-                                            disabled={!currentProduct.type}
-                                        >
-                                            <option value="">ELEGIR...</option>
-                                            {(allCategories.find(c => c._id === ((currentProduct.category && typeof currentProduct.category === 'object') ? currentProduct.category._id : currentProduct.category))
-                                              ?.types?.find(t => t._id === ((currentProduct.type && typeof currentProduct.type === 'object') ? currentProduct.type._id : currentProduct.type))
-                                              ?.subcategories || []).map(sub => (
-                                                <option key={sub._id} value={sub._id}>{sub.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Sub-subcategory (Detalle) */}
+                                {/* Diseñador → Categoría → Subcategoría */}
                                 {(() => {
-                                  const catId = (currentProduct.category && typeof currentProduct.category === 'object') ? currentProduct.category._id : currentProduct.category;
-                                  const typeId = (currentProduct.type && typeof currentProduct.type === 'object') ? currentProduct.type._id : currentProduct.type;
-                                  const subId = (currentProduct.subcategory && typeof currentProduct.subcategory === 'object') ? currentProduct.subcategory._id : currentProduct.subcategory;
-                                  const subsubOptions = allCategories
-                                    .find(c => c._id === catId)
-                                    ?.types?.find(t => t._id === typeId)
-                                    ?.subcategories?.find(s => s._id === subId)
-                                    ?.subsubcategories || [];
-                                  if (!subId) return null;
+                                  const catId = currentProduct.category && typeof currentProduct.category === 'object'
+                                    ? currentProduct.category._id : currentProduct.category || '';
+                                  const subcatId = currentProduct.subcategory && typeof currentProduct.subcategory === 'object'
+                                    ? currentProduct.subcategory._id : currentProduct.subcategory || '';
+                                  const designerId = currentProduct.designer || '';
+
+                                  const designerMap = {};
+                                  for (const cat of allCategories) {
+                                    if (cat.designer) {
+                                      const id = cat.designer._id || cat.designer;
+                                      if (!designerMap[id]) designerMap[id] = { _id: id, name: cat.designer.name || cat.designer };
+                                    }
+                                  }
+                                  const designerOptions = Object.values(designerMap).sort((a, b) => a.name.localeCompare(b.name));
+
+                                  const categoriesForDesigner = allCategories.filter(cat => {
+                                    const dId = (cat.designer?._id || cat.designer || '').toString();
+                                    return dId === designerId;
+                                  });
+
+                                  const subcatsForCategory = allCategories.find(c => c._id === catId)?.subcategories || [];
+
                                   return (
-                                    <div className="grid grid-cols-3 gap-4">
+                                    <>
                                       <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2 ml-1">Detalle</label>
+                                        <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2 ml-1">Diseñador</label>
                                         <select
                                           className="w-full p-3 bg-white border border-gray-200 rounded-xl font-bold text-[10px] uppercase outline-none focus:border-black"
-                                          value={(currentProduct.subsubcategory && typeof currentProduct.subsubcategory === 'object') ? currentProduct.subsubcategory._id : currentProduct.subsubcategory || ""}
-                                          onChange={e => setCurrentProduct({...currentProduct, subsubcategory: e.target.value})}
+                                          value={designerId}
+                                          onChange={e => setCurrentProduct({ ...currentProduct, designer: e.target.value, category: '', subcategory: '' })}
                                         >
                                           <option value="">ELEGIR...</option>
-                                          {subsubOptions.map(ss => (
-                                            <option key={ss._id} value={ss._id}>{ss.name}</option>
+                                          {designerOptions.map(d => (
+                                            <option key={d._id} value={d._id}>{d.name}</option>
                                           ))}
                                         </select>
                                       </div>
-                                    </div>
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2 ml-1">Categoría</label>
+                                          <select
+                                            className="w-full p-3 bg-white border border-gray-200 rounded-xl font-bold text-[10px] uppercase outline-none focus:border-black disabled:opacity-40"
+                                            value={catId}
+                                            onChange={e => setCurrentProduct({ ...currentProduct, category: e.target.value, subcategory: '' })}
+                                            disabled={!designerId}
+                                          >
+                                            <option value="">ELEGIR...</option>
+                                            {categoriesForDesigner.map(c => (
+                                              <option key={c._id} value={c._id}>{c.name}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2 ml-1">Subcategoría</label>
+                                          <select
+                                            className="w-full p-3 bg-white border border-gray-200 rounded-xl font-bold text-[10px] uppercase outline-none focus:border-black disabled:opacity-40"
+                                            value={subcatId}
+                                            onChange={e => setCurrentProduct({ ...currentProduct, subcategory: e.target.value })}
+                                            disabled={!catId}
+                                          >
+                                            <option value="">ELEGIR...</option>
+                                            {subcatsForCategory.map(s => (
+                                              <option key={s._id} value={s._id}>{s.name}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      </div>
+                                    </>
                                   );
                                 })()}
 

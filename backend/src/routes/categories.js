@@ -7,53 +7,20 @@ const SubSubcategory = require('../models/SubSubcategory');
 const Designer = require('../models/Designer');
 const auth = require('../middleware/auth');
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function buildSubcategories(subcategories, subsubcategories, typeId) {
-  return subcategories
-    .filter(sub => sub.type?.toString() === typeId.toString())
-    .map(sub => ({
-      ...sub,
-      subsubcategories: subsubcategories.filter(
-        ss => ss.subcategory?.toString() === sub._id.toString()
-      )
-    }));
-}
-
-function buildTypes(types, subcategories, subsubcategories, categoryId) {
-  return types
-    .filter(t => t.category?.toString() === categoryId.toString())
-    .map(t => ({
-      ...t,
-      subcategories: buildSubcategories(subcategories, subsubcategories, t._id)
-    }));
-}
-
 // ── GET /api/categories ───────────────────────────────────────────────────────
 
 router.get('/', async (req, res) => {
   try {
     await connectDB();
-    const [categories, types, subcategories, subsubcategories] = await Promise.all([
+    const [categories, subcategories] = await Promise.all([
       Category.find().populate('designer').sort({ name: 1 }).lean(),
-      Type.find().sort({ name: 1 }).lean(),
       Subcategory.find().sort({ name: 1 }).lean(),
-      SubSubcategory.find().sort({ name: 1 }).lean(),
     ]);
 
-    const result = categories.map((cat) => {
-      const directSubcategories = subcategories.filter(
-        sub => sub.category?.toString() === cat._id.toString() && !sub.type
-      );
-      return {
-        ...cat,
-        types: buildTypes(types, subcategories, subsubcategories, cat._id),
-        subcategories: directSubcategories.map(sub => ({
-          ...sub,
-          subsubcategories: subsubcategories.filter(ss => ss.subcategory?.toString() === sub._id.toString())
-        }))
-      };
-    });
+    const result = categories.map(cat => ({
+      ...cat,
+      subcategories: subcategories.filter(sub => sub.category?.toString() === cat._id.toString()),
+    }));
 
     res.json(result);
   } catch (err) {
@@ -61,27 +28,25 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ── GET /api/categories/designers — full 5-level tree ─────────────────────────
+// ── GET /api/categories/designers — 3-level tree ──────────────────────────────
 
 router.get('/designers', async (req, res) => {
   try {
     await connectDB();
-    const [designers, categories, types, subcategories, subsubcategories] = await Promise.all([
+    const [designers, categories, subcategories] = await Promise.all([
       Designer.find().sort({ name: 1 }).lean(),
       Category.find().sort({ name: 1 }).lean(),
-      Type.find().sort({ name: 1 }).lean(),
       Subcategory.find().sort({ name: 1 }).lean(),
-      SubSubcategory.find().sort({ name: 1 }).lean(),
     ]);
 
-    const result = designers.map((designer) => {
+    const result = designers.map(designer => {
       const designerCats = categories.filter(c => c.designer?.toString() === designer._id.toString());
       return {
         ...designer,
         categories: designerCats.map(cat => ({
           ...cat,
-          types: buildTypes(types, subcategories, subsubcategories, cat._id)
-        }))
+          subcategories: subcategories.filter(sub => sub.category?.toString() === cat._id.toString()),
+        })),
       };
     });
 
