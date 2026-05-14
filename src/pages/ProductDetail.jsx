@@ -73,8 +73,13 @@ export default function ProductDetail() {
     );
   }
 
-  const galeria = [product.imagen_url, ...(product.galeria || [])].filter(Boolean);
   const hasVariants = product.variantes && product.variantes.length > 0;
+
+  // Unique variant images (one per color, deduped by URL)
+  const variantImages = hasVariants
+    ? [...new Map(product.variantes.filter(v => v.imagen).map(v => [v.imagen, v.imagen])).values()]
+    : [];
+  const galeria = [product.imagen_url, ...(product.galeria || []), ...variantImages].filter(Boolean);
 
   // Extraer tallas por sistema y detectar si hay doble sistema EUR/US
   const tallasEur = hasVariants
@@ -234,15 +239,24 @@ export default function ProductDetail() {
                         <div className="space-y-3">
                             <p className="text-sm font-medium text-gray-900">Seleccionar Color</p>
                             <div className="flex flex-wrap gap-3">
-                                {colores.map(c => (
-                                    <button 
-                                        key={c}
-                                        onClick={() => setSelectedColor(c)}
-                                        className={`px-6 h-12 text-sm font-medium rounded-md border transition-all ${selectedColor === c ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-700 hover:border-black'}`}
-                                    >
-                                        {c}
-                                    </button>
-                                ))}
+                                {colores.map(c => {
+                                    const variantImg = product.variantes.find(v => v.color === c && v.imagen)?.imagen;
+                                    return (
+                                        <button
+                                            key={c}
+                                            onClick={() => {
+                                                setSelectedColor(c);
+                                                if (variantImg) setSelectedImage(variantImg);
+                                            }}
+                                            className={`flex items-center gap-2 px-4 h-12 text-sm font-medium rounded-md border transition-all ${selectedColor === c ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-700 hover:border-black'}`}
+                                        >
+                                            {variantImg && (
+                                                <img src={variantImg} className={`w-6 h-6 rounded object-cover ${selectedColor === c ? 'opacity-80' : 'mix-blend-multiply'}`} alt="" />
+                                            )}
+                                            {c}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}

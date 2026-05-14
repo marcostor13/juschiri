@@ -388,6 +388,21 @@ export default function Backoffice() {
       });
   };
 
+  const handleVariantImageUpload = async (index, file) => {
+    if (!file) return;
+    setFormLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/upload/presigned?fileName=${file.name}&fileType=${file.type}`);
+      const { uploadUrl, publicUrl } = await res.json();
+      await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+      updateVariant(index, 'imagen', publicUrl);
+      showNotification('Imagen de variante subida', 'success');
+    } catch (err) {
+      showNotification('Error al subir imagen', 'error');
+    }
+    setFormLoading(false);
+  };
+
   const sumVariantStock = (variants) =>
     variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
 
@@ -1081,21 +1096,35 @@ export default function Backoffice() {
                                     
                                     <div className="space-y-2">
                                         {(currentProduct.variantes || []).map((v, i) => (
-                                            <div key={i} className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm animate-fade-in-up space-y-2">
-                                                <div className="flex gap-2">
-                                                    <div className="flex-1 relative">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-gray-400 uppercase pointer-events-none">EUR</span>
-                                                        <input type="text" placeholder="42" className="w-full pl-9 pr-2 py-2.5 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none focus:ring-2 focus:ring-black/10" value={v.talla_eur || v.talla || ''} onChange={e => updateVariant(i, 'talla_eur', e.target.value)} />
+                                            <div key={i} className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm animate-fade-in-up">
+                                                <div className="flex gap-3">
+                                                    {/* Imagen de variante */}
+                                                    <label className="w-[4.5rem] h-[4.5rem] flex-shrink-0 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center cursor-pointer overflow-hidden relative group/vimg hover:border-gray-300 transition-colors">
+                                                        {v.imagen ? (
+                                                            <img src={v.imagen} className="w-full h-full object-cover mix-blend-multiply p-1" alt="" />
+                                                        ) : (
+                                                            <ImagePlus size={16} className="text-gray-300 group-hover/vimg:text-gray-500 transition-colors" />
+                                                        )}
+                                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleVariantImageUpload(i, e.target.files[0])} disabled={formLoading} />
+                                                    </label>
+                                                    {/* Tallas + color + stock */}
+                                                    <div className="flex-1 space-y-2">
+                                                        <div className="flex gap-2">
+                                                            <div className="flex-1 relative">
+                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-gray-400 uppercase pointer-events-none">EUR</span>
+                                                                <input type="text" placeholder="42" className="w-full pl-9 pr-2 py-2.5 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none focus:ring-2 focus:ring-black/10" value={v.talla_eur || v.talla || ''} onChange={e => updateVariant(i, 'talla_eur', e.target.value)} />
+                                                            </div>
+                                                            <div className="flex-1 relative">
+                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-gray-400 uppercase pointer-events-none">US</span>
+                                                                <input type="text" placeholder="8.5" className="w-full pl-8 pr-2 py-2.5 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none focus:ring-2 focus:ring-black/10" value={v.talla_us || ''} onChange={e => updateVariant(i, 'talla_us', e.target.value)} />
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-2 items-center">
+                                                            <input type="text" placeholder="Color" className="flex-1 p-2.5 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none focus:ring-2 focus:ring-black/10" value={v.color || ''} onChange={e => updateVariant(i, 'color', e.target.value)} />
+                                                            <input type="number" placeholder="Stock" min="0" className="w-20 p-2.5 bg-gray-50 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-black/10" value={v.stock} onChange={e => updateVariant(i, 'stock', Number(e.target.value))} />
+                                                            <button type="button" onClick={() => removeVariant(i)} className="p-2.5 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"><Trash2 size={14}/></button>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex-1 relative">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-gray-400 uppercase pointer-events-none">US</span>
-                                                        <input type="text" placeholder="8.5" className="w-full pl-8 pr-2 py-2.5 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none focus:ring-2 focus:ring-black/10" value={v.talla_us || ''} onChange={e => updateVariant(i, 'talla_us', e.target.value)} />
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2 items-center">
-                                                    <input type="text" placeholder="Color" className="flex-1 p-2.5 bg-gray-50 rounded-xl font-bold text-xs uppercase outline-none focus:ring-2 focus:ring-black/10" value={v.color || ''} onChange={e => updateVariant(i, 'color', e.target.value)} />
-                                                    <input type="number" placeholder="Stock" min="0" className="w-20 p-2.5 bg-gray-50 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-black/10" value={v.stock} onChange={e => updateVariant(i, 'stock', Number(e.target.value))} />
-                                                    <button type="button" onClick={() => removeVariant(i)} className="p-2.5 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"><Trash2 size={14}/></button>
                                                 </div>
                                             </div>
                                         ))}

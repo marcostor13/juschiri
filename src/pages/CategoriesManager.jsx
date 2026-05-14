@@ -80,7 +80,7 @@ export default function CategoriesManager({ showNotification }) {
   const [designers, setDesigners] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState('tree');
+  const [view] = useState('tree');
 
   const [expandedDesigners, setExpandedDesigners] = useState({});
   const [expandedCats, setExpandedCats] = useState({});
@@ -376,103 +376,17 @@ export default function CategoriesManager({ showNotification }) {
     );
   };
 
-  // ── Flat categories view ──────────────────────────────────────────────────────
-
-  const FlatCategoriesView = () => (
-    <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm">
-      <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
-        <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">
-          {loading ? '...' : `${categories.length} categorías`}
-        </p>
-        <button onClick={() => setAdding({ level: 'category' })}
-          className="flex items-center gap-2 bg-black text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider hover:bg-gray-800 transition-all">
-          <Plus size={15} /> Nueva Categoría
-        </button>
-      </div>
-
-      {loading && <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-gray-300" size={32} /></div>}
-
-      <div className="divide-y divide-gray-50">
-        {categories.map(cat => (
-          <div key={cat._id}>
-            <div
-              className="flex items-center gap-3 px-8 py-4 group hover:bg-gray-50/60 cursor-pointer"
-              onClick={() => setExpandedCats(p => ({ ...p, [cat._id]: !p[cat._id] }))}
-            >
-              <span className="text-gray-400 flex-shrink-0">
-                {expandedCats[cat._id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              </span>
-              {editing?.id === cat._id ? (
-                <EditableRow name={cat.name} onSave={handleEdit} onCancel={() => setEditing(null)} />
-              ) : (
-                <>
-                  <span className="flex-1 text-sm font-bold uppercase tracking-wide text-gray-900">{cat.name}</span>
-                  {cat.designer && (
-                    <span className="text-[10px] font-mono bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md mr-2 uppercase">{cat.designer.name}</span>
-                  )}
-                  <span className="text-[10px] font-mono text-gray-400 mr-2">{cat.subcategories?.length || 0} subcats</span>
-                  <ActionBtns id={cat._id} level="category" name={cat.name}
-                    extra={
-                      <button type="button" onClick={e => { e.stopPropagation(); setAssignTarget(cat); }}
-                        title="Asignar diseñador"
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                        <LinkIcon size={14} />
-                      </button>
-                    }
-                  />
-                </>
-              )}
-            </div>
-
-            {expandedCats[cat._id] && (
-              <div className="bg-gray-50/40">
-                {(cat.subcategories || []).map(sub => (
-                  <SubcatRow key={sub._id} sub={sub} indent="pl-14" />
-                ))}
-                {adding?.level === 'subcategory' && adding.parentId === cat._id ? (
-                  <div className="pl-14 pr-8 py-3 border-t border-gray-100/60">
-                    <AddRow placeholder="Nombre de subcategoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
-                  </div>
-                ) : (
-                  <button type="button"
-                    onClick={e => { e.stopPropagation(); setAdding({ level: 'subcategory', parentId: cat._id }); }}
-                    className="flex items-center gap-1.5 pl-14 pr-8 py-2.5 w-full text-left text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors border-t border-gray-100/60 hover:bg-gray-50/60">
-                    <Plus size={12} /> Subcategoría
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {adding?.level === 'category' && !adding.designerId && (
-        <div className="px-8 py-4 border-t border-gray-100 bg-gray-50/60">
-          <AddRow placeholder="Nombre de categoría..." onSave={handleAdd} onCancel={() => setAdding(null)} />
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-2">
-        <button onClick={() => setView('tree')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${view === 'tree' ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-500 hover:text-black hover:border-black'}`}>
-          Vista Diseñadores
-        </button>
-        <button onClick={() => setView('categories')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${view === 'categories' ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-500 hover:text-black hover:border-black'}`}>
-          Vista Categorías
-        </button>
+      <div className="flex items-center justify-end">
         <button onClick={fetchAll}
-          className="ml-auto p-2.5 bg-white border border-gray-200 rounded-xl hover:border-gray-900 text-gray-400 hover:text-black transition-all"
+          className="p-2.5 bg-white border border-gray-200 rounded-xl hover:border-gray-900 text-gray-400 hover:text-black transition-all"
           title="Actualizar">
           <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
 
-      {view === 'tree' ? <TreeView /> : <FlatCategoriesView />}
+      <TreeView />
 
       {assignTarget && (
         <AssignDesignerModal category={assignTarget} designers={designers} onSave={handleAssignDesigner} onClose={() => setAssignTarget(null)} />

@@ -21,7 +21,8 @@ const ProductSchema = new mongoose.Schema(
       talla_eur: String,
       talla_us:  String,
       color:     String,
-      stock:     { type: Number, default: 0, min: 0 }
+      stock:     { type: Number, default: 0, min: 0 },
+      imagen:    { type: String, default: null }
     }],
   },
   { timestamps: true }
