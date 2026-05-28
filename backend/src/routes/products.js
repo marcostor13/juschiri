@@ -1,26 +1,25 @@
 const router = require('express').Router();
 const connectDB = require('../db');
 const Product = require('../models/Product');
+const Category = require('../models/Category');
 const auth = require('../middleware/auth');
 
 // GET /api/products
 router.get('/', async (req, res) => {
   try {
     await connectDB();
-    const { category, type, subcategory, subsubcategory, designer, marca, search, sort, page = 1, limit = 20 } = req.query;
+    const { category, subcategory, designer, marca, search, sort, page = 1, limit = 20 } = req.query;
 
     const filter = {};
-    if (category) filter.category = category;
-    if (type) filter.type = type;
+    if (category)    filter.category    = category;
     if (subcategory) filter.subcategory = subcategory;
-    if (subsubcategory) filter.subsubcategory = subsubcategory;
-    if (designer) filter.designer = designer;
-    if (marca) filter.marca = new RegExp(marca, 'i');
-    if (search) filter.$text = { $search: search };
+    if (designer)    filter.designer    = designer;
+    if (marca)       filter.marca       = new RegExp(marca, 'i');
+    if (search)      filter.$text       = { $search: search };
 
     const sortOption = {};
-    if (sort === 'price_asc') sortOption.precio = 1;
-    else if (sort === 'price_desc') sortOption.precio = -1;
+    if (sort === 'price_asc')   sortOption.precio_min = 1;
+    else if (sort === 'price_desc') sortOption.precio_min = -1;
     else if (sort === 'newest') sortOption.createdAt = -1;
     else sortOption.createdAt = 1;
 
@@ -28,9 +27,7 @@ router.get('/', async (req, res) => {
     const [products, total] = await Promise.all([
       Product.find(filter)
         .populate('category')
-        .populate('type')
         .populate('subcategory')
-        .populate('subsubcategory')
         .populate('designer')
         .sort(sortOption)
         .skip(skip)
@@ -39,47 +36,103 @@ router.get('/', async (req, res) => {
       Product.countDocuments(filter),
     ]);
 
-    res.json({
-      products,
-      total,
-      page: Number(page),
-      pages: Math.ceil(total / Number(limit)),
-    });
+    res.json({ products, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/products/bulk  — must be before /:codigo
-router.post('/bulk', async (req, res) => {
+// Helpers ─────────────────────────────────────────────────────────────────────
+
+function calcStockActual(variantes = []) {
+  return variantes.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+}
+
+function calcImagenUrl(variantes = []) {
+  const principal = variantes.find(v => v.esPrincipal && v.imagen);
+  if (principal) return principal.imagen;
+  const primero = variantes.find(v => v.imagen);
+  return primero ? primero.imagen : null;
+}
+
+function calcPrecioMin(variantes = []) {
+  const efectivos = variantes
+    .filter(v => Number(v.precio) > 0)
+    .map(v => {
+      const p = Number(v.precio);
+      const d = Number(v.descuento) || 0;
+      return d > 0 ? p * (1 - d / 100) : p;
+    });
+  return efectivos.length ? Math.min(...efectivos) : 0;
+}
+
+function calcTieneOferta(variantes = []) {
+  return variantes.some(v => Number(v.descuento) > 0);
+}
+
+async function enrichAndValidate(body, excludeId = null) {
+  const variantes = body.variantes || [];
+
+  // SKU unicidad interna
+  const skus = variantes.map(v => v.sku).filter(Boolean);
+  if (skus.length !== new Set(skus).size) {
+    throw new Error('Hay SKUs duplicados en las variantes');
+  }
+
+  // SKU unicidad en BD (excluye el propio producto en edición)
+  if (skus.length) {
+    const query = { 'variantes.sku': { $in: skus } };
+    if (excludeId) query._id = { $ne: excludeId };
+    const conflict = await Product.findOne(query).lean();
+    if (conflict) {
+      const dupSku = conflict.variantes.find(v => skus.includes(v.sku))?.sku;
+      throw new Error(`El SKU "${dupSku}" ya está en uso`);
+    }
+  }
+
+  // Derivar designer desde la categoría
+  let designer = null;
+  if (body.category) {
+    const cat = await Category.findById(body.category).lean();
+    if (cat?.designer) designer = cat.designer;
+  }
+
+  return {
+    nombre:       body.nombre,
+    marca:        body.marca || '',
+    category:     body.category || null,
+    subcategory:  body.subcategory || null,
+    designer,
+    galeria:      body.galeria || [],
+    variantes,
+    stock_actual: calcStockActual(variantes),
+    imagen_url:   calcImagenUrl(variantes),
+    precio_min:   calcPrecioMin(variantes),
+    tiene_oferta: calcTieneOferta(variantes),
+  };
+}
+
+// POST /api/products
+router.post('/', auth, async (req, res) => {
   try {
     await connectDB();
-    const items = Array.isArray(req.body) ? req.body : [];
-    if (!items.length) return res.status(400).json({ error: 'Empty array' });
-
-    const ops = items.map((p) => ({
-      updateOne: {
-        filter: { codigo: p.codigo },
-        update: { $set: p },
-        upsert: true,
-      },
-    }));
-
-    const result = await Product.bulkWrite(ops, { ordered: false });
-    res.status(201).json({
-      upserted: result.upsertedCount,
-      modified: result.modifiedCount,
-    });
+    const data = await enrichAndValidate(req.body);
+    const product = await Product.create(data);
+    res.status(201).json(product);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-// GET /api/products/:codigo
-router.get('/:codigo', async (req, res) => {
+// GET /api/products/:id
+router.get('/:id', async (req, res) => {
   try {
     await connectDB();
-    const product = await Product.findOne({ codigo: req.params.codigo }).lean();
+    const product = await Product.findById(req.params.id)
+      .populate('category')
+      .populate('subcategory')
+      .populate('designer')
+      .lean();
     if (!product) return res.status(404).json({ error: 'Not found' });
     res.json(product);
   } catch (err) {
@@ -87,36 +140,14 @@ router.get('/:codigo', async (req, res) => {
   }
 });
 
-// Convierte strings vacíos a null en campos ObjectId opcionales
-function sanitizeObjectIds(body) {
-  const fields = ['category', 'type', 'subcategory', 'subsubcategory'];
-  const cleaned = { ...body };
-  for (const field of fields) {
-    if (cleaned[field] === '' || cleaned[field] === undefined) {
-      cleaned[field] = null;
-    }
-  }
-  return cleaned;
-}
-
-// POST /api/products
-router.post('/', async (req, res) => {
+// PUT /api/products/:id
+router.put('/:id', auth, async (req, res) => {
   try {
     await connectDB();
-    const product = await Product.create(sanitizeObjectIds(req.body));
-    res.status(201).json(product);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// PUT /api/products/:codigo
-router.put('/:codigo', async (req, res) => {
-  try {
-    await connectDB();
-    const product = await Product.findOneAndUpdate(
-      { codigo: req.params.codigo },
-      { $set: sanitizeObjectIds(req.body) },
+    const data = await enrichAndValidate(req.body, req.params.id);
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $set: data },
       { new: true, runValidators: true }
     ).lean();
     if (!product) return res.status(404).json({ error: 'Not found' });
@@ -126,7 +157,7 @@ router.put('/:codigo', async (req, res) => {
   }
 });
 
-// DELETE /api/products/zero-stock — must be before /:codigo
+// DELETE /products/zero-stock — must be before /:id
 router.delete('/zero-stock', auth, async (req, res) => {
   try {
     await connectDB();
@@ -137,13 +168,13 @@ router.delete('/zero-stock', auth, async (req, res) => {
   }
 });
 
-// DELETE /api/products/:codigo
-router.delete('/:codigo', async (req, res) => {
+// DELETE /api/products/:id
+router.delete('/:id', auth, async (req, res) => {
   try {
     await connectDB();
-    const product = await Product.findOneAndDelete({ codigo: req.params.codigo }).lean();
+    const product = await Product.findByIdAndDelete(req.params.id).lean();
     if (!product) return res.status(404).json({ error: 'Not found' });
-    res.json({ deleted: true, codigo: req.params.codigo });
+    res.json({ deleted: true, id: req.params.id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

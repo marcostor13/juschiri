@@ -18,7 +18,10 @@
       "Bash(node *)",
       "Bash(grep -E \"\\\\.\\(xlsx|json|js\\)$\")",
       "PowerShell(Get-ChildItem \"C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\\\\backend\" -Recurse -Exclude \"node_modules\" | Where-Object { !$_.FullName.Contains\\(\"node_modules\"\\) } | Select-Object FullName | Format-Table -AutoSize)",
-      "Bash(dir C:\\\\Marcos\\\\Proyectos *)"
+      "Bash(dir C:\\\\Marcos\\\\Proyectos *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Format-Table)"
     ]
   }
 }

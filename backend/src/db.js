@@ -17,8 +17,8 @@ async function connectDB() {
     cached.promise = mongoose.connect(uri, {
       bufferCommands: false,
     }).then(async (m) => {
-      // Drop legacy unique index on category name (allows same name under different designers)
       try { await m.connection.collection('categories').dropIndex('name_1'); } catch (_) {}
+      try { await m.connection.collection('products').dropIndex('codigo_1'); } catch (_) {}
       return m;
     });
   }

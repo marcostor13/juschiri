@@ -20,6 +20,8 @@ const apiRouter = express.Router();
 apiRouter.get('/health', (_req, res) => res.json({ status: 'ok' }));
 apiRouter.use('/products', productRoutes);
 apiRouter.use('/categories', require('./routes/categories'));
+apiRouter.use('/tallas', require('./routes/tallas'));
+apiRouter.use('/colores', require('./routes/colores'));
 apiRouter.use('/upload', require('./routes/upload'));
 apiRouter.use('/auth', require('./routes/auth'));
 apiRouter.use('/sales', require('./routes/sales'));

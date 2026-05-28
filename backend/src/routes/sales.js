@@ -13,7 +13,7 @@ router.post('/', async (req, res) => {
       orderId: `ORD-${Date.now()}`,
       items: cart.map(i => ({
         producto: i._id,
-        codigo: i.codigo,
+        codigo: i.sku,
         nombre: i.nombre,
         precio: i.precio,
         cantidad: i.cantidad || 1
