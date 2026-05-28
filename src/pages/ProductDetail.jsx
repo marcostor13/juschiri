@@ -73,16 +73,21 @@ export default function ProductDetail() {
   const galeria = [product.imagen_url, ...(product.galeria || []), ...product.variantes.map(v => v.imagen)]
     .filter(img => img && !seen.has(img) && seen.add(img));
 
-  // Solo tallas/colores con stock
-  const variantesConStock = hasVariants ? product.variantes.filter(v => v.stock > 0) : [];
-  const tallasConStock = [...new Set(variantesConStock.map(v => v.talla).filter(Boolean))];
-  const coloresConStock = (selectedTalla
-    ? variantesConStock.filter(v => v.talla === selectedTalla)
-    : variantesConStock
-  ).map(v => v.color).filter(Boolean);
-  const coloresUnicos = [...new Set(coloresConStock)];
+  // Tallas y colores: todas las variantes (con o sin stock) para mostrar en UI
+  const todasVariantes = hasVariants ? product.variantes : [];
+  const todasTallas = [...new Set(todasVariantes.map(v => v.talla).filter(Boolean))];
+  const todosColores = [...new Set(
+    (selectedTalla
+      ? todasVariantes.filter(v => v.talla === selectedTalla)
+      : todasVariantes
+    ).map(v => v.color).filter(Boolean)
+  )];
 
-  // Variante seleccionada
+  // Helpers para saber si una talla/color tiene stock disponible
+  const tallaConStock = (talla) => todasVariantes.some(v => v.talla === talla && v.stock > 0);
+  const colorConStock = (color) => todasVariantes.some(v => v.color === color && (!selectedTalla || v.talla === selectedTalla) && v.stock > 0);
+
+  // Variante seleccionada: requiere stock > 0 (para precio, carrito)
   const varianteSeleccionada = hasVariants
     ? product.variantes.find(v =>
         (!selectedTalla || v.talla === selectedTalla) &&
@@ -106,8 +111,8 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (!hasVariants) return alert('Este producto no tiene variantes disponibles');
-    if (tallasConStock.length > 0 && !selectedTalla) return alert('Por favor selecciona una talla');
-    if (coloresUnicos.length > 0 && !selectedColor) return alert('Por favor selecciona un color');
+    if (todasTallas.length > 0 && !selectedTalla) return alert('Por favor selecciona una talla');
+    if (todosColores.length > 0 && !selectedColor) return alert('Por favor selecciona un color');
     if (!varianteSeleccionada) return alert('Combinación sin stock');
 
     const varPrecio = varianteSeleccionada.precio || 0;
@@ -203,36 +208,46 @@ export default function ProductDetail() {
           </div>
 
           <div className="space-y-8 border-t border-gray-100 pt-8 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-            {/* Tallas con stock */}
-            {tallasConStock.length > 0 && (
+            {/* Tallas */}
+            {todasTallas.length > 0 && (
               <div className="space-y-3">
                 <p className="text-sm font-medium text-gray-900">Seleccionar Talla</p>
                 <div className="flex flex-wrap gap-3">
-                  {tallasConStock.map(t => (
-                    <button
-                      key={t}
-                      onClick={() => handleSelectTalla(t)}
-                      className={`min-w-[3.5rem] h-12 px-4 flex items-center justify-center text-sm font-medium border transition-all ${selectedTalla === t ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-700 hover:border-black'}`}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                  {todasTallas.map(t => {
+                    const conStock = tallaConStock(t);
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => conStock ? handleSelectTalla(t) : undefined}
+                        disabled={!conStock}
+                        className={`min-w-[3.5rem] h-12 px-4 flex items-center justify-center text-sm font-medium border transition-all
+                          ${selectedTalla === t ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-700 hover:border-black'}
+                          ${!conStock ? 'opacity-40 cursor-not-allowed line-through hover:border-gray-200' : ''}`}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* Colores con stock */}
-            {coloresUnicos.length > 0 && (
+            {/* Colores */}
+            {todosColores.length > 0 && (
               <div className="space-y-3">
                 <p className="text-sm font-medium text-gray-900">Seleccionar Color</p>
                 <div className="flex flex-wrap gap-3">
-                  {coloresUnicos.map(c => {
+                  {todosColores.map(c => {
+                    const conStock = colorConStock(c);
                     const varImg = product.variantes.find(v => v.color === c && v.imagen)?.imagen;
                     return (
                       <button
                         key={c}
-                        onClick={() => handleSelectColor(c)}
-                        className={`flex items-center gap-2 px-4 h-12 text-sm font-medium border transition-all ${selectedColor === c ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-700 hover:border-black'}`}
+                        onClick={() => conStock ? handleSelectColor(c) : undefined}
+                        disabled={!conStock}
+                        className={`flex items-center gap-2 px-4 h-12 text-sm font-medium border transition-all
+                          ${selectedColor === c ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-700 hover:border-black'}
+                          ${!conStock ? 'opacity-40 cursor-not-allowed line-through hover:border-gray-200' : ''}`}
                       >
                         {varImg && (
                           <img src={varImg} className={`w-6 h-6 object-cover ${selectedColor === c ? 'opacity-80' : 'mix-blend-multiply'}`} alt="" />
