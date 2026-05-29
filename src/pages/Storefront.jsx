@@ -163,13 +163,19 @@ const TrendingGallery = ({ customGallery }) => {
 
 const ProductCard = React.memo(({ product, onAddToCart }) => {
   const navigate = useNavigate();
-  const hasVariants = product.variantes && product.variantes.length > 0;
 
   const handleAdd = (e) => {
     e.preventDefault();
     e.stopPropagation();
     navigate(`/producto/${product._id}`);
   };
+
+  // Segunda imagen para el hover: 2a foto del color principal → 1a foto de otro color → galería
+  const principalVar = product.variantes?.find(v => v.esPrincipal);
+  const hoverImage = principalVar?.imagenes?.[1]
+    || product.variantes?.find(v => !v.esPrincipal && v.imagenes?.length)?.imagenes?.[0]
+    || product.galeria?.[0]
+    || null;
 
   return (
     <div className="group relative bg-white transition-all duration-300 flex flex-col h-full animate-fade-in-up">
@@ -184,13 +190,13 @@ const ProductCard = React.memo(({ product, onAddToCart }) => {
         )}
         {isVideo(product.imagen_url) ? (
           <>
-            <video src={product.imagen_url} autoPlay loop muted playsInline className={`absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply transition-all duration-700 ease-out z-10 ${product.galeria?.length ? 'group-hover:opacity-0 group-hover:scale-95' : 'group-hover:scale-105'}`} />
-            {product.galeria?.length > 0 && <img src={product.galeria[0]} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out z-0 scale-105 group-hover:scale-100" />}
+            <video src={product.imagen_url} autoPlay loop muted playsInline className={`absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply transition-all duration-700 ease-out z-10 ${hoverImage ? 'group-hover:opacity-0 group-hover:scale-95' : 'group-hover:scale-105'}`} />
+            {hoverImage && <img src={hoverImage} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out z-0 scale-105 group-hover:scale-100" />}
           </>
         ) : (
           <>
-            <img src={product.imagen_url || 'https://via.placeholder.com/400?text=No+Image'} alt={product.nombre} loading="lazy" decoding="async" className={`absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply transition-all duration-700 ease-out z-10 ${product.galeria?.length ? 'group-hover:opacity-0 group-hover:scale-95' : 'group-hover:scale-105'}`} />
-            {product.galeria?.length > 0 && <img src={product.galeria[0]} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out z-0 scale-105 group-hover:scale-100" />}
+            <img src={product.imagen_url || 'https://via.placeholder.com/400?text=No+Image'} alt={product.nombre} loading="lazy" decoding="async" className={`absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply transition-all duration-700 ease-out z-10 ${hoverImage ? 'group-hover:opacity-0 group-hover:scale-95' : 'group-hover:scale-105'}`} />
+            {hoverImage && <img src={hoverImage} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out z-0 scale-105 group-hover:scale-100" />}
           </>
         )}
       </Link>
@@ -703,7 +709,8 @@ export default function Storefront() {
       <main id="shop" className="flex-1 w-full max-w-[1920px] mx-auto">
         {/* Barra de filtros sticky */}
         <div className="sticky top-20 sm:top-28 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 flex flex-col transition-all">
-          {/* Fila 1: chips de categoría + botón filtros */}
+
+          {/* Fila 1: TODOS + OFERTAS + Diseñadores + FILTROS */}
           <div className="flex justify-between items-center p-4 sm:px-8 gap-4 border-b border-gray-100/50">
             <div className="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar w-full py-1">
               <button
@@ -713,35 +720,25 @@ export default function Storefront() {
                 TODOS
               </button>
               <button
-                onClick={() => { setOnSaleOnly(!onSaleOnly); setSelectedCategoryId(null); setSelectedSubcategoryId(null); setSelectedBrand(null); }}
+                onClick={() => { setOnSaleOnly(!onSaleOnly); setSelectedDesignerId(null); setSelectedCategoryId(null); setSelectedSubcategoryId(null); setSelectedBrand(null); }}
                 className={`text-xs px-5 py-2 rounded-full border transition-all flex-shrink-0 font-bold uppercase tracking-wider ${onSaleOnly ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
               >
                 OFERTAS
               </button>
-              {selectedDesignerId && (
+              {allDesigners.map(des => (
                 <button
-                  onClick={() => setSelectedDesignerId(null)}
-                  className="text-xs px-5 py-2 rounded-full border transition-all flex-shrink-0 bg-gray-900 text-white border-gray-900 font-bold uppercase tracking-wider flex items-center gap-2 group"
+                  key={des._id}
+                  onClick={() => {
+                    if (selectedDesignerId === des._id) {
+                      setSelectedDesignerId(null); setSelectedCategoryId(null); setSelectedSubcategoryId(null);
+                    } else {
+                      setSelectedDesignerId(des._id); setSelectedCategoryId(null); setSelectedSubcategoryId(null); setSelectedBrand(null);
+                      document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className={`text-xs px-5 py-2 rounded-full border transition-all flex-shrink-0 font-bold uppercase tracking-wider ${selectedDesignerId === des._id ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
                 >
-                  {allDesigners.find(d => d._id === selectedDesignerId)?.name?.toUpperCase() || 'DISEÑADOR'}
-                  <X className="w-3 h-3 group-hover:scale-125 transition-transform" />
-                </button>
-              )}
-              {selectedBrand && (
-                <button
-                  onClick={() => setSelectedBrand(null)}
-                  className="text-xs px-5 py-2 rounded-full border transition-all flex-shrink-0 bg-gray-900 text-white border-gray-900 font-bold uppercase tracking-wider flex items-center gap-2 group"
-                >
-                  {selectedBrand.toUpperCase()} <X className="w-3 h-3 group-hover:scale-125 transition-transform" />
-                </button>
-              )}
-              {allCategories.map(cat => (
-                <button
-                  key={cat._id}
-                  onClick={() => { setSelectedCategoryId(cat._id); setSelectedSubcategoryId(null); setSelectedBrand(null); }}
-                  className={`text-xs px-5 py-2 rounded-full border transition-all flex-shrink-0 font-bold uppercase tracking-wider ${selectedCategoryId === cat._id ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
-                >
-                  {cat.name.toUpperCase()}
+                  {des.name.toUpperCase()}
                 </button>
               ))}
             </div>
@@ -754,9 +751,33 @@ export default function Storefront() {
             </button>
           </div>
 
-          {/* Fila 2: subcategorías de la categoría seleccionada */}
-          {activeCategory && activeCategory.subcategories?.length > 0 && (
-            <div className="bg-gray-50/50 border-b border-gray-100 flex gap-2 overflow-x-auto no-scrollbar px-4 sm:px-8 py-2.5">
+          {/* Fila 2: Categorías del diseñador seleccionado */}
+          {(() => {
+            const selDesigner = allDesigners.find(d => d._id === selectedDesignerId);
+            return selDesigner?.categories?.length > 0 ? (
+              <div className="bg-gray-50/50 border-b border-gray-100 flex gap-2 overflow-x-auto no-scrollbar px-4 sm:px-8 py-2.5">
+                <button
+                  onClick={() => { setSelectedCategoryId(null); setSelectedSubcategoryId(null); }}
+                  className={`text-[11px] px-4 py-1.5 rounded-md transition-colors flex-shrink-0 font-bold uppercase tracking-wider ${!selectedCategoryId ? 'bg-black text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  TODO
+                </button>
+                {selDesigner.categories.map(cat => (
+                  <button
+                    key={cat._id}
+                    onClick={() => { setSelectedCategoryId(cat._id); setSelectedSubcategoryId(null); }}
+                    className={`text-[11px] px-4 py-1.5 rounded-md transition-colors flex-shrink-0 font-bold uppercase tracking-wider ${selectedCategoryId === cat._id ? 'bg-black text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                  >
+                    {cat.name.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            ) : null;
+          })()}
+
+          {/* Fila 3: Subcategorías de la categoría seleccionada */}
+          {activeCategory?.subcategories?.length > 0 && (
+            <div className="bg-gray-50/30 border-b border-gray-100 flex gap-2 overflow-x-auto no-scrollbar px-4 sm:px-8 py-2.5">
               <button
                 onClick={() => setSelectedSubcategoryId(null)}
                 className={`text-[11px] px-4 py-1.5 rounded-md transition-colors flex-shrink-0 font-bold uppercase tracking-wider ${!selectedSubcategoryId ? 'bg-white shadow-sm border border-gray-200 text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}

@@ -1,14 +1,18 @@
 const mongoose = require('mongoose');
 
+const TallaSchema = new mongoose.Schema({
+  talla:     { type: String, trim: true, default: '' },
+  sku:       { type: String, required: true, trim: true },
+  stock:     { type: Number, default: 0, min: 0 },
+  precio:    { type: Number, required: true, min: 0 },
+  descuento: { type: Number, default: 0, min: 0, max: 100 },
+}, { _id: false });
+
 const VarianteSchema = new mongoose.Schema({
-  sku:        { type: String, required: true, trim: true },
-  talla:      { type: String, trim: true, default: '' },
-  color:      { type: String, trim: true, default: '' },
-  imagen:     { type: String, default: null },
-  stock:      { type: Number, default: 0, min: 0 },
-  precio:     { type: Number, required: true, min: 0 },
-  descuento:  { type: Number, default: 0, min: 0, max: 100 },
-  esPrincipal:{ type: Boolean, default: false },
+  color:       { type: String, trim: true, default: '' },
+  imagenes:    [{ type: String }],
+  esPrincipal: { type: Boolean, default: false },
+  tallas:      [TallaSchema],
 }, { _id: true });
 
 const ProductSchema = new mongoose.Schema(

@@ -68,13 +68,29 @@ export default function ProductDetail() {
 
   const hasVariants = product.variantes && product.variantes.length > 0;
 
-  // Galería: imagen principal + galería adicional + imágenes de variantes (dedupe)
+  // Aplana la estructura anidada (color → tallas) para la lógica de selección
+  const flatVariantes = hasVariants
+    ? product.variantes.flatMap(v =>
+        (v.tallas || []).map(t => ({
+          color: v.color,
+          imagen: v.imagenes?.[0] || null,
+          esPrincipal: v.esPrincipal,
+          talla: t.talla,
+          sku: t.sku,
+          stock: t.stock,
+          precio: t.precio,
+          descuento: t.descuento,
+        }))
+      )
+    : [];
+
+  // Galería: imagen principal + galería adicional + imágenes de todos los colores (dedupe)
   const seen = new Set();
-  const galeria = [product.imagen_url, ...(product.galeria || []), ...product.variantes.map(v => v.imagen)]
+  const galeria = [product.imagen_url, ...(product.galeria || []), ...product.variantes.flatMap(v => v.imagenes || [])]
     .filter(img => img && !seen.has(img) && seen.add(img));
 
-  // Tallas y colores: todas las variantes (con o sin stock) para mostrar en UI
-  const todasVariantes = hasVariants ? product.variantes : [];
+  // Tallas y colores disponibles
+  const todasVariantes = flatVariantes;
   const todasTallas = [...new Set(todasVariantes.map(v => v.talla).filter(Boolean))];
   const todosColores = [...new Set(
     (selectedTalla
@@ -89,7 +105,7 @@ export default function ProductDetail() {
 
   // Variante seleccionada: requiere stock > 0 (para precio, carrito)
   const varianteSeleccionada = hasVariants
-    ? product.variantes.find(v =>
+    ? flatVariantes.find(v =>
         (!selectedTalla || v.talla === selectedTalla) &&
         (!selectedColor || v.color === selectedColor) &&
         v.stock > 0
@@ -99,14 +115,15 @@ export default function ProductDetail() {
   const handleSelectTalla = (talla) => {
     setSelectedTalla(talla);
     setSelectedColor('');
-    const v = product.variantes.find(v => v.talla === talla && v.imagen);
+    // Imagen es por color: busca el color group que tenga esta talla
+    const v = flatVariantes.find(fv => fv.talla === talla && fv.imagen);
     if (v?.imagen) setSelectedImage(v.imagen);
   };
 
   const handleSelectColor = (color) => {
     setSelectedColor(color);
-    const v = product.variantes.find(v => v.color === color && (!selectedTalla || v.talla === selectedTalla) && v.imagen);
-    if (v?.imagen) setSelectedImage(v.imagen);
+    const v = product.variantes.find(v => v.color === color && v.imagenes?.length);
+    if (v?.imagenes?.[0]) setSelectedImage(v.imagenes[0]);
   };
 
   const handleAddToCart = () => {
@@ -239,7 +256,7 @@ export default function ProductDetail() {
                 <div className="flex flex-wrap gap-3">
                   {todosColores.map(c => {
                     const conStock = colorConStock(c);
-                    const varImg = product.variantes.find(v => v.color === c && v.imagen)?.imagen;
+                    const varImg = product.variantes.find(v => v.color === c && v.imagenes?.length)?.imagenes?.[0];
                     return (
                       <button
                         key={c}

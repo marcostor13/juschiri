@@ -21,7 +21,11 @@
       "Bash(dir C:\\\\Marcos\\\\Proyectos *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\" -Force)",
       "Bash(Select-Object Name, PSIsContainer)",
-      "Bash(Format-Table)"
+      "Bash(Format-Table)",
+      "Bash(Get-ChildItem -Recurse -Directory -Name)",
+      "Bash(Select-Object -First 50)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\" -Recurse -Directory | Select-Object -First 30 | ForEach-Object { $_.FullName })",
+      "Bash(xargs wc -l)"
     ]
   }
 }

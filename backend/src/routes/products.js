@@ -45,47 +45,50 @@ router.get('/', async (req, res) => {
 // Helpers ─────────────────────────────────────────────────────────────────────
 
 function calcStockActual(variantes = []) {
-  return variantes.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  return variantes.reduce((sum, v) =>
+    sum + (v.tallas || []).reduce((s, t) => s + (Number(t.stock) || 0), 0), 0);
 }
 
 function calcImagenUrl(variantes = []) {
-  const principal = variantes.find(v => v.esPrincipal && v.imagen);
-  if (principal) return principal.imagen;
-  const primero = variantes.find(v => v.imagen);
-  return primero ? primero.imagen : null;
+  const principal = variantes.find(v => v.esPrincipal && v.imagenes?.length);
+  if (principal) return principal.imagenes[0];
+  const primero = variantes.find(v => v.imagenes?.length);
+  return primero ? primero.imagenes[0] : null;
 }
 
 function calcPrecioMin(variantes = []) {
-  const efectivos = variantes
-    .filter(v => Number(v.precio) > 0)
-    .map(v => {
-      const p = Number(v.precio);
-      const d = Number(v.descuento) || 0;
+  const efectivos = variantes.flatMap(v => v.tallas || [])
+    .filter(t => Number(t.precio) > 0)
+    .map(t => {
+      const p = Number(t.precio);
+      const d = Number(t.descuento) || 0;
       return d > 0 ? p * (1 - d / 100) : p;
     });
   return efectivos.length ? Math.min(...efectivos) : 0;
 }
 
 function calcTieneOferta(variantes = []) {
-  return variantes.some(v => Number(v.descuento) > 0);
+  return variantes.some(v => (v.tallas || []).some(t => Number(t.descuento) > 0));
 }
 
 async function enrichAndValidate(body, excludeId = null) {
   const variantes = body.variantes || [];
 
-  // SKU unicidad interna
-  const skus = variantes.map(v => v.sku).filter(Boolean);
+  // SKU unicidad interna (a través de todos los tallas de todas las variantes)
+  const skus = variantes.flatMap(v => (v.tallas || []).map(t => t.sku)).filter(Boolean);
   if (skus.length !== new Set(skus).size) {
     throw new Error('Hay SKUs duplicados en las variantes');
   }
 
   // SKU unicidad en BD (excluye el propio producto en edición)
   if (skus.length) {
-    const query = { 'variantes.sku': { $in: skus } };
+    const query = { 'variantes.tallas.sku': { $in: skus } };
     if (excludeId) query._id = { $ne: excludeId };
     const conflict = await Product.findOne(query).lean();
     if (conflict) {
-      const dupSku = conflict.variantes.find(v => skus.includes(v.sku))?.sku;
+      const dupSku = conflict.variantes
+        .flatMap(v => v.tallas || [])
+        .find(t => skus.includes(t.sku))?.sku;
       throw new Error(`El SKU "${dupSku}" ya está en uso`);
     }
   }
