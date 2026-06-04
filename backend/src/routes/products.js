@@ -16,6 +16,8 @@ router.get('/', async (req, res) => {
     if (designer)    filter.designer    = designer;
     if (marca)       filter.marca       = new RegExp(marca, 'i');
     if (search)      filter.$text       = { $search: search };
+    // Ocultar productos duplicados (solo el de código menor es visible) salvo admin
+    if (req.query.showAll !== '1') filter.esVisible = { $ne: false };
 
     const sortOption = {};
     if (sort === 'price_asc')   sortOption.precio_min = 1;

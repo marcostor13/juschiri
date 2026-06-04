@@ -58,7 +58,7 @@ const Navbar = ({ cartCount, onOpenCart, searchQuery, setSearchQuery, onOpenMenu
           </div>
           <div className="flex items-center justify-end w-1/3 gap-6">
             <button onClick={onOpenCart} className={`relative flex items-center gap-2 transition-all duration-300 group hover:opacity-70 ${isBumping ? 'scale-110' : ''}`}>
-              <span className="font-semibold text-sm hidden sm:block tracking-wide">CART</span>
+              <span className="font-semibold text-sm hidden sm:block tracking-wide">CARRITO</span>
               <div className="relative">
                 <ShoppingBag strokeWidth={1.5} className="w-6 h-6" />
                 {cartCount > 0 && (
@@ -224,6 +224,8 @@ const ProductCard = React.memo(({ product, onAddToCart }) => {
 
 // ── Checkout Modal ────────────────────────────────────────────────────────────
 
+const STEP_LABELS = { cart: 'CARRITO', shipping: 'ENVÍO', payment: 'PAGO' };
+
 const CheckoutStepIndicator = ({ step }) => (
   <div className="flex justify-between mb-8 px-4 relative">
     <div className="absolute top-1/2 left-0 w-full h-[1px] bg-gray-200 -z-10"></div>
@@ -233,7 +235,7 @@ const CheckoutStepIndicator = ({ step }) => (
       return (
         <div key={s} className={`flex flex-col items-center bg-white px-2 ${isActive || isPast ? 'text-black' : 'text-gray-400'}`}>
           <div className={`w-3 h-3 rounded-full border-2 ${isActive || isPast ? 'border-black bg-black' : 'border-gray-300 bg-white'} mb-2`}></div>
-          <span className="text-[10px] uppercase font-semibold tracking-wider">{s}</span>
+          <span className="text-[10px] uppercase font-semibold tracking-wider">{STEP_LABELS[s]}</span>
         </div>
       );
     })}
@@ -288,7 +290,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onClearCart, onRemoveItem
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
       <div className="bg-white w-full sm:w-[500px] h-full sm:h-[85vh] relative flex flex-col shadow-2xl sm:rounded-xl overflow-hidden">
         <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white">
-          <h2 className="text-lg font-semibold tracking-wide">{step === 'success' ? 'Orden Confirmada' : 'Checkout'}</h2>
+          <h2 className="text-lg font-semibold tracking-wide">{step === 'success' ? 'Orden Confirmada' : 'Tu Pedido'}</h2>
           <button onClick={onClose} className="p-2 text-gray-500 hover:text-black rounded-full hover:bg-gray-50 transition-colors"><X className="w-5 h-5" /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-6">
@@ -456,30 +458,42 @@ const Sidebar = ({ isOpen, onClose, allCategories, allDesigners, selectedCategor
                   </button>
                   {(expandedDesigners[des._id] || selectedDesignerId === des._id) && des.categories?.length > 0 && (
                     <div className="pl-4 space-y-1 border-l-2 border-gray-100 ml-2 py-1">
-                      {des.categories.map(cat => (
-                        <div key={cat._id}>
-                          <button
-                            onClick={() => { onSelectCategory(cat._id); onSelectSubcategory(null); }}
-                            className={`flex items-center justify-between w-full text-left text-xs font-bold uppercase tracking-wider transition-colors py-1 ${selectedCategoryId === cat._id ? 'text-black' : 'text-gray-500 hover:text-black'}`}
-                          >
-                            {cat.name.toUpperCase()}
-                            {cat.subcategories?.length > 0 && <ChevronDown size={12} className={`transition-transform ${expandedCats[cat._id] || selectedCategoryId === cat._id ? 'rotate-180' : ''}`} />}
-                          </button>
-                          {(expandedCats[cat._id] || selectedCategoryId === cat._id) && cat.subcategories?.length > 0 && (
-                            <div className="pl-3 space-y-1 border-l border-gray-200 ml-1 py-1">
-                              {cat.subcategories.map(sub => (
-                                <button
-                                  key={sub._id}
-                                  onClick={() => { onSelectSubcategory(sub._id); onClose(); }}
-                                  className={`block w-full text-left text-[11px] font-semibold uppercase tracking-wider transition-colors py-0.5 ${selectedSubcategoryId === sub._id ? 'text-black' : 'text-gray-400 hover:text-black'}`}
-                                >
-                                  {sub.name.toUpperCase()}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                      {des.categories.map(cat => {
+                        // Categoría global equivalente (para el ID de filtro y sus subcategorías globales)
+                        const globalCat = allCategories.find(c => !c.designer && c.name === cat.name);
+                        const gid = (globalCat?._id || cat._id)?.toString();
+                        // Subcategorías propias del diseñador para esta categoría
+                        const desSubs = cat.subcategories || [];
+                        return (
+                          <div key={cat._id}>
+                            <button
+                              onClick={() => { onSelectCategory(gid); onSelectSubcategory(null); setExpandedCats(p => ({ ...p, [cat._id]: !p[cat._id] })); }}
+                              className={`flex items-center justify-between w-full text-left text-xs font-bold uppercase tracking-wider transition-colors py-1 ${selectedCategoryId === gid ? 'text-black' : 'text-gray-500 hover:text-black'}`}
+                            >
+                              {cat.name.toUpperCase()}
+                              {desSubs.length > 0 && <ChevronDown size={12} className={`transition-transform ${expandedCats[cat._id] || selectedCategoryId === gid ? 'rotate-180' : ''}`} />}
+                            </button>
+                            {(expandedCats[cat._id] || selectedCategoryId === gid) && desSubs.length > 0 && (
+                              <div className="pl-3 space-y-1 border-l border-gray-200 ml-1 py-1">
+                                {desSubs.map(sub => {
+                                  // Mapear al ID de la subcategoría global (mismo nombre) para que el filtro funcione
+                                  const globalSub = globalCat?.subcategories?.find(s => s.name === sub.name);
+                                  const subFilterId = (globalSub?._id || sub._id)?.toString();
+                                  return (
+                                    <button
+                                      key={sub._id}
+                                      onClick={() => { onSelectSubcategory(subFilterId); onClose(); }}
+                                      className={`block w-full text-left text-[11px] font-semibold uppercase tracking-wider transition-colors py-0.5 ${selectedSubcategoryId === subFilterId ? 'text-black' : 'text-gray-400 hover:text-black'}`}
+                                    >
+                                      {sub.name.toUpperCase()}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -490,7 +504,7 @@ const Sidebar = ({ isOpen, onClose, allCategories, allDesigners, selectedCategor
           {/* Catálogo */}
           <div className="space-y-2">
             <h3 className="text-[11px] text-gray-500 uppercase font-bold tracking-widest border-b border-gray-100 pb-2">CATÁLOGO</h3>
-            {allCategories.map(cat => (
+            {allCategories.filter(cat => !cat.designer).map(cat => (
               <div key={cat._id}>
                 <button
                   onClick={() => { onSelectCategory(cat._id); onSelectSubcategory(null); setExpandedCats(p => ({ ...p, [cat._id]: !p[cat._id] })); }}
@@ -617,15 +631,15 @@ export default function Storefront() {
     let result = products.filter(p => {
       if (!p.precio_min || p.precio_min <= 0) return false;
       if (selectedDesignerId) {
-        const did = p.designer?._id || p.designer;
+        const did = (p.designer?._id || p.designer)?.toString();
         if (did !== selectedDesignerId) return false;
       }
       if (selectedCategoryId) {
-        const cid = p.category?._id || p.category;
+        const cid = (p.category?._id || p.category)?.toString();
         if (cid !== selectedCategoryId) return false;
       }
       if (selectedSubcategoryId) {
-        const sid = p.subcategory?._id || p.subcategory;
+        const sid = (p.subcategory?._id || p.subcategory)?.toString();
         if (sid !== selectedSubcategoryId) return false;
       }
       if (selectedBrand && (!p.marca || p.marca.trim().toLowerCase() !== selectedBrand.trim().toLowerCase())) return false;
@@ -670,7 +684,24 @@ export default function Storefront() {
     setSelectedSubcategoryId(null); setSelectedBrand(null); setSortBy('featured');
   };
 
-  const activeCategory = allCategories.find(c => c._id === selectedCategoryId);
+  const activeCategory = (() => {
+    const globalCat = allCategories.find(c => c._id?.toString() === selectedCategoryId);
+    if (!globalCat) return null;
+    // Cuando hay diseñador seleccionado, mostrar solo las subcategorías que ese diseñador tiene
+    if (selectedDesignerId) {
+      const selDes = allDesigners.find(d => d._id?.toString() === selectedDesignerId);
+      const desCat = selDes?.categories?.find(c => c.name === globalCat.name);
+      if (desCat?.subcategories?.length) {
+        // Usar las subcategorías del diseñador pero con los IDs globales para que el filtro funcione
+        const mappedSubs = desCat.subcategories.map(sub => {
+          const globalSub = globalCat.subcategories?.find(s => s.name === sub.name);
+          return { ...sub, _id: (globalSub?._id || sub._id)?.toString() };
+        });
+        return { ...globalCat, subcategories: mappedSubs };
+      }
+    }
+    return globalCat;
+  })();
 
   return (
     <div className="font-sans antialiased bg-white text-gray-900 selection:bg-neon-green min-h-screen flex flex-col">
@@ -762,15 +793,19 @@ export default function Storefront() {
                 >
                   TODO
                 </button>
-                {selDesigner.categories.map(cat => (
-                  <button
-                    key={cat._id}
-                    onClick={() => { setSelectedCategoryId(cat._id); setSelectedSubcategoryId(null); }}
-                    className={`text-[11px] px-4 py-1.5 rounded-md transition-colors flex-shrink-0 font-bold uppercase tracking-wider ${selectedCategoryId === cat._id ? 'bg-black text-white' : 'text-gray-500 hover:text-gray-900'}`}
-                  >
-                    {cat.name.toUpperCase()}
-                  </button>
-                ))}
+                {selDesigner.categories.map(cat => {
+                  const globalCat = allCategories.find(c => !c.designer && c.name === cat.name);
+                  const gid = globalCat?._id || cat._id;
+                  return (
+                    <button
+                      key={cat._id}
+                      onClick={() => { setSelectedCategoryId(gid); setSelectedSubcategoryId(null); }}
+                      className={`text-[11px] px-4 py-1.5 rounded-md transition-colors flex-shrink-0 font-bold uppercase tracking-wider ${selectedCategoryId === gid ? 'bg-black text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                    >
+                      {cat.name.toUpperCase()}
+                    </button>
+                  );
+                })}
               </div>
             ) : null;
           })()}

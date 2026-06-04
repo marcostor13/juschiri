@@ -27,7 +27,10 @@ const ProductSchema = new mongoose.Schema(
     stock_actual: { type: Number, default: 0, min: 0 },
     precio_min:   { type: Number, default: 0 },
     tiene_oferta: { type: Boolean, default: false },
-    variantes:    [VarianteSchema],
+    variantes:        [VarianteSchema],
+    codigoMin:        { type: Number, default: 0 },
+    esVisible:        { type: Boolean, default: true },
+    primaryProductId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
   },
   { timestamps: true }
 );

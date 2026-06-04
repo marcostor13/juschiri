@@ -8,7 +8,7 @@ import ProductForm from './pages/ProductForm';
 
 // ── Mantenimiento ─────────────────────────────────────────────────────────────
 // Cambiar a false para volver al sitio normal
-const MAINTENANCE = true;
+const MAINTENANCE = false;
 
 const isLocal = typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');

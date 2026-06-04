@@ -25,6 +25,11 @@ export default function ProductDetail() {
         const res = await fetch(`${API_URL}/products/${id}`);
         if (res.ok) {
           const p = await res.json();
+          // Redirigir al producto primario si este es un duplicado oculto
+          if (!p.esVisible && p.primaryProductId) {
+            navigate(`/product/${p.primaryProductId}`, { replace: true });
+            return;
+          }
           setProduct(p);
           setSelectedImage(p.imagen_url || '');
 
