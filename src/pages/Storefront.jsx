@@ -129,12 +129,31 @@ const HeroSlider = ({ customSlides }) => {
 
 const TrendingGallery = ({ customGallery }) => {
   const defaultItems = [
-    { brand: 'Jordan', name: 'Air Jordan 1 Retro High', img: 'https://images.unsplash.com/photo-1597045566677-8cf032ed6634?q=80&w=1974&auto=format&fit=crop', color: 'bg-gray-100' },
-    { brand: 'Yeezy', name: 'Boost 350 V2', img: 'https://images.unsplash.com/photo-1615290642882-6b9501729a27?q=80&w=1974&auto=format&fit=crop', color: 'bg-[#F4F4F4]' },
-    { brand: 'Nike', name: 'Dunk Low Retro', img: 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=1925&auto=format&fit=crop', color: 'bg-[#F0F4F8]' },
-    { brand: 'New Balance', name: '550 White Grey', img: 'https://images.unsplash.com/photo-1664478546384-d57ffe74a7f4?q=80&w=2070&auto=format&fit=crop', color: 'bg-[#FAFAFA]' },
-    { brand: 'Supreme', name: 'Box Logo Hoodie', img: 'https://images.unsplash.com/photo-1515347619362-e6fdff686524?q=80&w=2069&auto=format&fit=crop', color: 'bg-[#FEF2F2]' },
+    { brand: 'Essentials', name: 'Dark Oatmeal', productId: '6a30aaf333ebc7e910d2c88d', img: 'https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/16000043.jpeg', precio: 750, color: '#F5F0EB' },
+    { brand: 'Off White', name: 'Diag Helvetica Off White Black', productId: '6a30aaf533ebc7e910d2c8bd', img: 'https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00004042.jpeg', precio: 2399, color: '#F4F4F4' },
+    { brand: 'Supreme', name: 'Box Hoodie Sweatshirt Dark Red', productId: '6a30aaf633ebc7e910d2c8f3', img: 'https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00004387.jpeg', precio: 1300, color: '#FEF2F2' },
+    { brand: 'Palm Angels', name: 'Allover Palms Bowling Shirt Black White', productId: '6a30aaf733ebc7e910d2c908', img: 'https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/00003000.jpeg', precio: 1499, color: '#F4F4F4' },
+    { brand: 'Travis Scott', name: 'Travis Scott Cactus Jack X Nike T-rexx Glow In The Dark Tee Black', productId: '6a30aafb33ebc7e910d2c980', img: 'https://aws-marcostorresalarcon-bucket.s3.us-east-2.amazonaws.com/products/11000042.jpeg', precio: 749, color: '#F0F4F8' },
   ];
+
+  const items = customGallery?.length ? customGallery : defaultItems;
+  const [productLinks, setProductLinks] = useState({});
+
+  useEffect(() => {
+    const links = {};
+    Promise.all(
+      items.map(async (item, i) => {
+        if (item.productId) { links[i] = item.productId; return; }
+        try {
+          const res = await fetch(`${API_URL}/products?search=${encodeURIComponent(item.name)}&limit=1`);
+          const data = await res.json();
+          const match = data.products?.[0];
+          if (match) links[i] = match._id;
+        } catch {}
+      })
+    ).then(() => setProductLinks({ ...links }));
+  }, [customGallery]);
+
   return (
     <div className="py-16 bg-white border-b border-gray-100 overflow-hidden">
       <div className="max-w-[1920px] mx-auto px-4 sm:px-8 mb-8 flex justify-between items-end">
@@ -144,16 +163,32 @@ const TrendingGallery = ({ customGallery }) => {
         </div>
         <a href="#shop" className="text-sm font-medium text-emerald-700 hover:text-emerald-800 transition-colors hidden sm:block">Ver catálogo completo →</a>
       </div>
-      <div className="relative w-full flex gap-4 overflow-x-auto no-scrollbar px-4 sm:px-8 pb-4 snap-x">
-        {(customGallery?.length ? customGallery : defaultItems).map((item, i) => (
-          <div key={i} className="min-w-[280px] sm:min-w-[320px] group cursor-pointer snap-start">
-            <div className={`aspect-[4/5] rounded-xl overflow-hidden mb-4 relative ${!item.color?.startsWith('#') ? item.color : ''}`} style={{ backgroundColor: item.color?.startsWith('#') ? item.color : undefined }}>
-              <img src={item.img} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-700" />
+      <div className="relative w-full flex items-stretch gap-4 overflow-x-auto no-scrollbar px-4 sm:px-8 pb-4 snap-x">
+        {items.map((item, i) => {
+          const productId = productLinks[i];
+          const inner = (
+            <div className="flex flex-col h-full">
+              <div
+                className={`h-[280px] sm:h-[320px] w-full rounded-xl overflow-hidden mb-4 relative flex-shrink-0 ${!item.color?.startsWith('#') ? item.color : ''}`}
+                style={{ backgroundColor: item.color?.startsWith('#') ? item.color : undefined }}
+              >
+                <img src={item.img} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-contain p-4 mix-blend-multiply group-hover:scale-105 transition-transform duration-700" />
+              </div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{item.brand}</p>
+              <p className="text-sm font-medium text-gray-900 truncate group-hover:underline decoration-1 mb-1">{item.name}</p>
+              {item.precio && <p className="text-sm font-mono text-gray-700">S/. {item.precio.toLocaleString()}</p>}
             </div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{item.brand}</p>
-            <p className="text-sm font-medium text-gray-900 truncate group-hover:underline decoration-1">{item.name}</p>
-          </div>
-        ))}
+          );
+          return productId ? (
+            <Link key={i} to={`/producto/${productId}`} className="min-w-[280px] sm:min-w-[320px] group snap-start">
+              {inner}
+            </Link>
+          ) : (
+            <div key={i} className="min-w-[280px] sm:min-w-[320px] group snap-start">
+              {inner}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -553,6 +588,92 @@ const Sidebar = ({ isOpen, onClose, allCategories, allDesigners, selectedCategor
   );
 };
 
+// ── Designer Slider ───────────────────────────────────────────────────────────
+
+const DesignerSlider = ({ designers, selectedId, onSelect }) => {
+  const [search, setSearch]       = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [hovered, setHovered]     = useState(false);
+  const inputRef = useRef(null);
+
+  const filtered = search
+    ? designers.filter(d => d.name.toLowerCase().includes(search.toLowerCase()))
+    : designers;
+
+  const isSearching = searchOpen || search.length > 0;
+
+  const pillClass = (id) =>
+    `text-xs px-4 py-2 rounded-full border transition-all flex-shrink-0 font-bold uppercase tracking-wider whitespace-nowrap select-none ${
+      selectedId === id
+        ? 'bg-black text-white border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)]'
+        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-800 hover:text-black'
+    }`;
+
+  const pillSet = (prefix) => filtered.map((des, i) => (
+    <button key={`${prefix}-${des._id}`} onClick={() => onSelect(des._id)} className={pillClass(des._id)}>
+      {des.name.toUpperCase()}
+    </button>
+  ));
+
+  const duration = `${Math.max(18, designers.length * 1.8)}s`;
+
+  return (
+    <div className="flex-1 flex items-center gap-2 min-w-0 overflow-hidden">
+      {/* Search toggle button */}
+      <button
+        onClick={() => {
+          const next = !searchOpen;
+          setSearchOpen(next);
+          if (next) setTimeout(() => inputRef.current?.focus(), 60);
+          else setSearch('');
+        }}
+        className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:border-black hover:text-black transition-colors"
+        aria-label="Buscar diseñador"
+      >
+        {searchOpen ? <X size={13} /> : <Search size={13} />}
+      </button>
+
+      {/* Search input (expand animation) */}
+      <div className={`flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${searchOpen ? 'w-44 sm:w-56 opacity-100' : 'w-0 opacity-0'}`}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar diseñador..."
+          className="w-full text-xs border border-gray-200 rounded-full px-4 py-2 outline-none focus:border-black font-medium placeholder:text-gray-400"
+        />
+      </div>
+
+      {/* Pills strip */}
+      {isSearching ? (
+        /* Static filtered list when searching */
+        <div className="flex gap-2 overflow-x-auto no-scrollbar py-0.5">
+          {filtered.length > 0
+            ? pillSet('s')
+            : <span className="text-xs text-gray-400 italic whitespace-nowrap">Sin resultados</span>
+          }
+        </div>
+      ) : (
+        /* Animated marquee when idle */
+        <div
+          className="flex-1 overflow-hidden"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+        >
+          <div
+            className="flex gap-2 w-max animate-marquee py-0.5"
+            style={{ animationDuration: duration, animationPlayState: hovered || selectedId ? 'paused' : 'running' }}
+          >
+            {pillSet('a')}
+            {pillSet('b')}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Storefront ────────────────────────────────────────────────────────────────
 
 export default function Storefront() {
@@ -741,9 +862,10 @@ export default function Storefront() {
         {/* Barra de filtros sticky */}
         <div className="sticky top-20 sm:top-28 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 flex flex-col transition-all">
 
-          {/* Fila 1: TODOS + OFERTAS + Diseñadores + FILTROS */}
-          <div className="flex justify-between items-center p-4 sm:px-8 gap-4 border-b border-gray-100/50">
-            <div className="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar w-full py-1">
+          {/* Fila 1: TODOS + OFERTAS | Diseñadores (search + marquee) | FILTROS */}
+          <div className="flex items-center gap-3 px-4 sm:px-8 py-3 border-b border-gray-100/50">
+            {/* Pills fijas */}
+            <div className="flex gap-2 flex-shrink-0">
               <button
                 onClick={clearAllFilters}
                 className={`text-xs px-5 py-2 rounded-full border transition-all flex-shrink-0 font-bold uppercase tracking-wider ${!selectedDesignerId && !selectedCategoryId && !selectedBrand && !onSaleOnly ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
@@ -756,23 +878,26 @@ export default function Storefront() {
               >
                 OFERTAS
               </button>
-              {allDesigners.map(des => (
-                <button
-                  key={des._id}
-                  onClick={() => {
-                    if (selectedDesignerId === des._id) {
-                      setSelectedDesignerId(null); setSelectedCategoryId(null); setSelectedSubcategoryId(null);
-                    } else {
-                      setSelectedDesignerId(des._id); setSelectedCategoryId(null); setSelectedSubcategoryId(null); setSelectedBrand(null);
-                      document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }}
-                  className={`text-xs px-5 py-2 rounded-full border transition-all flex-shrink-0 font-bold uppercase tracking-wider ${selectedDesignerId === des._id ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
-                >
-                  {des.name.toUpperCase()}
-                </button>
-              ))}
             </div>
+
+            {/* Divisor */}
+            <div className="w-px h-6 bg-gray-200 flex-shrink-0" />
+
+            {/* Diseñadores: búsqueda + slide animado */}
+            <DesignerSlider
+              designers={allDesigners}
+              selectedId={selectedDesignerId}
+              onSelect={(id) => {
+                if (selectedDesignerId === id) {
+                  setSelectedDesignerId(null); setSelectedCategoryId(null); setSelectedSubcategoryId(null);
+                } else {
+                  setSelectedDesignerId(id); setSelectedCategoryId(null); setSelectedSubcategoryId(null); setSelectedBrand(null);
+                  document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+            />
+
+            {/* FILTROS */}
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex-shrink-0 flex items-center justify-center gap-2 text-xs px-4 py-2 rounded-md border transition-colors font-bold uppercase tracking-wider ${showFilters ? 'bg-gray-100 border-gray-200 text-gray-900' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}

@@ -329,7 +329,7 @@ export default function ProductDetail() {
                     />
                   </div>
                   <h3 className="font-medium text-sm line-clamp-2 leading-tight mb-1 text-gray-900 group-hover:underline">{rel.nombre}</h3>
-                  <p className="text-sm text-gray-500">S/. {rel.precio?.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">S/. {(rel.precio_min || rel.precio)?.toLocaleString()}</p>
                 </Link>
               ))}
             </div>

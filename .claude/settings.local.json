@@ -28,7 +28,9 @@
       "Bash(xargs wc -l)",
       "Bash(Get-ChildItem -Path \"C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\" -Recurse -Directory)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(Test-Path *)"
+      "Bash(Test-Path *)",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\MARCOS\\\\.claude\\\\projects\\\\C--Marcos-Proyectos-juschiri-juschiri\\\\66fd80cb-752f-4adb-8d7b-60bf80db50b4\\\\tool-results\\\\borut98th.txt\" -Pattern \"Resumen|creados|saltados|duplicados|SKIP|ERROR\" | Select-Object -Last 20 | ForEach-Object { $_.Line })",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\MARCOS\\\\.claude\\\\projects\\\\C--Marcos-Proyectos-juschiri-juschiri\\\\66fd80cb-752f-4adb-8d7b-60bf80db50b4\\\\tool-results\\\\bmquika7k.txt\" -Pattern \"Resumen|subidas|actualizados|sin imagen|huerfanos|Errores\" | Select-Object -Last 15 | ForEach-Object { $_.Line })"
     ]
   }
 }
