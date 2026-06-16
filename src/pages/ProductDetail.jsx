@@ -33,12 +33,36 @@ export default function ProductDetail() {
           setProduct(p);
           setSelectedImage(p.imagen_url || '');
 
-          // Relacionados por misma subcategoría o marca
-          const relRes = await fetch(
-            `${API_URL}/products?limit=8${p.subcategory?._id ? `&subcategory=${p.subcategory._id}` : `&marca=${encodeURIComponent(p.marca || '')}`}`
-          );
-          const relData = await relRes.json();
-          setRelated((relData.products || []).filter(r => r._id !== p._id).slice(0, 4));
+          // Relacionados: cascada de fallbacks hasta completar 4
+          const seen = new Set([p._id]);
+          const pool = [];
+
+          const fetchRel = async (params) => {
+            if (pool.length >= 4) return;
+            try {
+              const r = await fetch(`${API_URL}/products?limit=12&${params}`);
+              const d = await r.json();
+              (d.products || []).forEach(pr => {
+                if (!seen.has(pr._id) && pool.length < 4) {
+                  seen.add(pr._id);
+                  pool.push(pr);
+                }
+              });
+            } catch {}
+          };
+
+          // 1. Misma subcategoría
+          if (p.subcategory?._id) await fetchRel(`subcategory=${p.subcategory._id}`);
+          // 2. Mismo diseñador
+          if (pool.length < 4 && p.designer?._id) await fetchRel(`designer=${p.designer._id}`);
+          // 3. Misma categoría
+          if (pool.length < 4 && p.category?._id) await fetchRel(`category=${p.category._id}`);
+          // 4. Misma marca (texto)
+          if (pool.length < 4 && p.marca) await fetchRel(`marca=${encodeURIComponent(p.marca)}`);
+          // 5. Cualquier producto reciente
+          if (pool.length < 4) await fetchRel(`sort=newest&limit=12`);
+
+          setRelated(pool.slice(0, 4));
         }
       } catch (err) {
         console.error(err);
