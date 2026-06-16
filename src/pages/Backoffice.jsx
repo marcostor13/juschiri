@@ -141,7 +141,7 @@ export default function Backoffice() {
   const [activeSection, setActiveSection] = useState('Todos');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
-  const [allCategories, setAllCategories] = useState([]);
+  const [allDesigners, setAllDesigners] = useState([]);
 
   // Backup & tools
   const [backupLoading, setBackupLoading] = useState(false);
@@ -153,14 +153,14 @@ export default function Backoffice() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const [prodRes, catRes] = await Promise.all([
+      const [prodRes, desRes] = await Promise.all([
         fetch(`${API_URL}/products?limit=2500`),
-        fetch(`${API_URL}/categories`),
+        fetch(`${API_URL}/categories/designers`),
       ]);
       const data = await prodRes.json();
-      const catData = await catRes.json();
+      const desData = await desRes.json();
       setProducts(data.products || []);
-      setAllCategories(catData || []);
+      setAllDesigners(desData || []);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -168,7 +168,7 @@ export default function Backoffice() {
   useEffect(() => { fetchProducts(); }, []);
 
   const filteredProducts = useMemo(() => products.filter(p => {
-    if (activeSection !== 'Todos' && p.category?._id !== activeSection) return false;
+    if (activeSection !== 'Todos' && p.designer?._id !== activeSection) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       return `${p.nombre || ''} ${p.marca || ''}`.toLowerCase().includes(q);
@@ -524,8 +524,8 @@ export default function Backoffice() {
         {activeTab === 'inventory' && (
           <div className="space-y-6 animate-fade-in">
             {/* Filters */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-3.5 flex flex-col lg:flex-row gap-4 items-center shadow-sm">
-              <div className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-xl w-full lg:w-96 border border-transparent focus-within:border-gray-200 focus-within:bg-white transition-all">
+            <div className="bg-white rounded-2xl border border-gray-100 p-3.5 flex flex-col gap-3 shadow-sm">
+              <div className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-xl w-full border border-transparent focus-within:border-gray-200 focus-within:bg-white transition-all">
                 <Search className="text-gray-400" size={18} />
                 <input
                   type="text" placeholder="Buscar por nombre o marca..."
@@ -534,20 +534,20 @@ export default function Backoffice() {
                   onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                 />
               </div>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar w-full py-1">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => { setActiveSection('Todos'); setCurrentPage(1); }}
-                  className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${activeSection === 'Todos' ? 'bg-black text-white' : 'bg-white text-gray-500 hover:text-black hover:bg-gray-50'}`}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${activeSection === 'Todos' ? 'bg-black text-white' : 'bg-gray-50 text-gray-500 hover:text-black hover:bg-gray-100'}`}
                 >
                   TODOS
                 </button>
-                {allCategories.map(cat => (
+                {allDesigners.map(d => (
                   <button
-                    key={cat._id}
-                    onClick={() => { setActiveSection(cat._id); setCurrentPage(1); }}
-                    className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${activeSection === cat._id ? 'bg-black text-white' : 'bg-white text-gray-500 hover:text-black hover:bg-gray-50'}`}
+                    key={d._id}
+                    onClick={() => { setActiveSection(d._id); setCurrentPage(1); }}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${activeSection === d._id ? 'bg-black text-white' : 'bg-gray-50 text-gray-500 hover:text-black hover:bg-gray-100'}`}
                   >
-                    {cat.name.toUpperCase()}
+                    {d.name}
                   </button>
                 ))}
               </div>

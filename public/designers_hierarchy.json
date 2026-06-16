@@ -1,0 +1,589 @@
+{
+  "total_designers": 36,
+  "designers": [
+    {
+      "designer": "ADIDAS",
+      "categories": [
+        {
+          "category": "SNEAKERS",
+          "subcategories": [
+            "BAD BUNNY",
+            "BADBO1.0",
+            "CAMPUS 80S",
+            "YEEZY"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "AMIRI",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "GORRO"
+          ]
+        },
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "DENIM JACKET",
+            "HOODIE",
+            "PANTS",
+            "T-SHIRT"
+          ]
+        },
+        {
+          "category": "SNEAKERS",
+          "subcategories": [
+            "AMIRI X MMY",
+            "BONE RUNNER",
+            "CLASSIC",
+            "MA-1",
+            "MA-2",
+            "MA-3",
+            "MA-4",
+            "NEWPORT",
+            "SKEL TOP",
+            "SKYLINE",
+            "STARS"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "BAPE",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "HOODIE",
+            "T-SHIRT"
+          ]
+        },
+        {
+          "category": "SNEAKERS",
+          "subcategories": [
+            "BAPESTA",
+            "FLYPSTA"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "BEARBRICK",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "MUÑECO"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "BURBERRY",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "TARJETERO"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "CASABLANCA",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "SHORT",
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "CHROME HEARTS",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "GORRO"
+          ]
+        },
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "LONG SLEEVE"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "DENIM TEARS",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "BUZO",
+            "HOODIE"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "DOLCE & GABBANA",
+      "categories": [
+        {
+          "category": "SNEAKERS",
+          "subcategories": [
+            "PORTOFINO"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "ERIC EMANUEL",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "SHORT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "ESSENTIALS",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "BUZO",
+            "HOODIE",
+            "SHORT",
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "GALLERY DEPT",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "GORRO"
+          ]
+        },
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "SHORT",
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "GOOD SPEED",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "HELLSTAR",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "SHORT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "HERON PRESTON",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "BUZO",
+            "HOODIE",
+            "SHIRT",
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "ICE CREAM",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "PANTS",
+            "SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "JORDAN",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "HOODIE"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "KAWS",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "MUÑECO"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "KITH X MARVEL",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "LOUIS VUITTON",
+      "categories": [
+        {
+          "category": "SNEAKERS",
+          "subcategories": [
+            "LV TRAINER"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "MONCLER",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "NIKE",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "HOODIE"
+          ]
+        },
+        {
+          "category": "SNEAKERS",
+          "subcategories": [
+            "AIR FORCE 1",
+            "AIR MAX",
+            "AIR OFRCE 1",
+            "DUNK",
+            "JORDAN",
+            "JORDAN 1",
+            "JORDAN 3",
+            "JORDAN 4",
+            "MIND 001"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "OFF WHITE",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "BEANE",
+            "CORREA",
+            "GLASSES",
+            "MEDIAS",
+            "TARJETERO",
+            "WALLET"
+          ]
+        },
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "CAFARENA",
+            "CHAQUETA JEAN",
+            "HOODIE",
+            "JACKET",
+            "JERSEY",
+            "LONG SLEEVE",
+            "PANTS",
+            "SHIRT",
+            "SHORT",
+            "SUETER",
+            "T-SHIRT"
+          ]
+        },
+        {
+          "category": "SNEAKERS",
+          "subcategories": [
+            "3.0 OFF COURT",
+            "BE RIGHT BACK",
+            "JORDAN",
+            "ODSY",
+            "OUT OF OFFICE",
+            "THE BALL",
+            "VULCANIZED"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "OFF WHITE X AC MILAN",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "JERSEY"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "PALM ANGELS",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "BEANE",
+            "GLASSES",
+            "GORRO",
+            "SOMBRERO",
+            "WALLET"
+          ]
+        },
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "BUZO DEPORTIVO",
+            "CREWNECK",
+            "HOODIE",
+            "JACKET",
+            "LONG SLEEVE",
+            "LONG SLEEVE SHIRT",
+            "PANTS",
+            "SHIRT",
+            "T-SHIRT",
+            "WINDBREAK"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "PLEASURE",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "JACKET",
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "POP MART",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "MUÑECO"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "PURPLE BRAND",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "PANTS"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "REXOTIC",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "CORREA",
+            "GORRO",
+            "TARJETERO",
+            "WALLET"
+          ]
+        },
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "LOG SLEEVE",
+            "LONG SLEEVE",
+            "PANTS",
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "RHUDE",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "HOODIE",
+            "T-SHIRT",
+            "ZIP HOODIE"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "SUPREME",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "BEANE",
+            "BOXER",
+            "ENCENDEDOR",
+            "GORRO",
+            "MEDIAS",
+            "MORRAL",
+            "PELOTA",
+            "SOCKS",
+            "TAZA",
+            "TOALLA",
+            "WOL"
+          ]
+        },
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "HOODIE",
+            "JACKET",
+            "LONG SLEEVE",
+            "PANTS",
+            "SUETER",
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "TIMBERLAND",
+      "categories": [
+        {
+          "category": "SNEAKERS",
+          "subcategories": [
+            "BOOTS"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "TRAVIS SCOTT",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "GORRO"
+          ]
+        },
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "SHIRT",
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "UNIQLO",
+      "categories": [
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "T-SHIRT"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "VALLEY FOREVER",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "GORRO"
+          ]
+        },
+        {
+          "category": "ROPA",
+          "subcategories": [
+            "CREWNECK",
+            "HOODIE",
+            "JACKET",
+            "LONG SLEEVE",
+            "PANTS",
+            "SHIRT",
+            "SHORT",
+            "T-SHIRT",
+            "ZIP AP HOODIE",
+            "ZIP UP HOODIE"
+          ]
+        }
+      ]
+    },
+    {
+      "designer": "VERSACE",
+      "categories": [
+        {
+          "category": "ACCESORIO",
+          "subcategories": [
+            "GLASSES"
+          ]
+        },
+        {
+          "category": "SNEAKERS",
+          "subcategories": [
+            "MERCURY V1"
+          ]
+        }
+      ]
+    }
+  ]
+}

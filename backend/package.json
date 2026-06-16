@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "migrate": "node src/scripts/migrate_excel.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1034.0",

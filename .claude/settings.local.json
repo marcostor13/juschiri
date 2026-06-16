@@ -27,7 +27,8 @@
       "PowerShell(Get-ChildItem -Path \"C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\" -Recurse -Directory | Select-Object -First 30 | ForEach-Object { $_.FullName })",
       "Bash(xargs wc -l)",
       "Bash(Get-ChildItem -Path \"C:\\\\Marcos\\\\Proyectos\\\\juschiri\\\\juschiri\" -Recurse -Directory)",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Test-Path *)"
     ]
   }
 }

@@ -6,7 +6,9 @@ const auth = require('../middleware/auth');
 router.get('/', async (req, res) => {
   try {
     await connectDB();
-    const tallas = await Talla.find().sort({ orden: 1, nombre: 1 }).lean();
+    const filter = {};
+    if (req.query.tipo) filter.tipo = req.query.tipo.toUpperCase();
+    const tallas = await Talla.find(filter).sort({ orden: 1, nombre: 1 }).lean();
     res.json(tallas);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -16,9 +18,11 @@ router.get('/', async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     await connectDB();
-    const { nombre, talla_eur, talla_us, orden } = req.body;
+    const { nombre, valor, tipo, talla_eur, talla_us, orden } = req.body;
     const talla = await Talla.create({
       nombre,
+      valor:     valor     || null,
+      tipo:      tipo      || null,
       talla_eur: talla_eur || null,
       talla_us:  talla_us  || null,
       orden: orden || 0,
@@ -33,10 +37,17 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     await connectDB();
-    const { nombre, talla_eur, talla_us, orden } = req.body;
+    const { nombre, valor, tipo, talla_eur, talla_us, orden } = req.body;
     const talla = await Talla.findByIdAndUpdate(
       req.params.id,
-      { nombre, talla_eur: talla_eur || null, talla_us: talla_us || null, orden: orden ?? 0 },
+      {
+        nombre,
+        valor:     valor     || null,
+        tipo:      tipo      || null,
+        talla_eur: talla_eur || null,
+        talla_us:  talla_us  || null,
+        orden: orden ?? 0,
+      },
       { new: true, runValidators: true }
     );
     if (!talla) return res.status(404).json({ error: 'Not found' });
